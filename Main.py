@@ -58,3 +58,4 @@ plt.show()
 
 file_test = ds.listing("/home/rumcajs/Desktop/Inzynierka/")
 # ds.csv_convert("/home/rumcajs/Desktop/Inzynierka/Dane/raport_1/grafen")
+# this is minor change just to check if some solution works
