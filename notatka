@@ -1,8 +1,0 @@
-a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], ... , a[n-2], a[n-1]
-n elementów -> średnia arytmetyczna to av(a) = sum(a)/len(a)
-dodać element a[n] taki, aby średnia arytmetyczna pozostała bez zmian.
-(sum(a) + a[n])/(len(a)+1) = sum(a)/len(a)
-sum(a) + a[n] = sum(a) * (len(a)+1)/len(a)
-a[n] = sum(a) *((len(a)+1)/len(a) - 1)
-a[n] = sum(a) * (1 + 1/len(a) - 1)
-a[n] = sum(a)/len(a) = av(a)
