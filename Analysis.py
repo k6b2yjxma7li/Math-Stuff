@@ -1,5 +1,3 @@
-#   @author: k6b2yjmax7li
-
 import numpy as np
 
 
