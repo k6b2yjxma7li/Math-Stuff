@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 # import numpy as np
 from DataStruct import DataStruct
 import DataStruct as ds
-# import Analysis
 
 
 data = DataStruct("/home/rumcajs/Desktop/Inzynierka/Dane/raport_1/grafen_csv")
