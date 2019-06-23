@@ -9,7 +9,7 @@ which create a powerful, but not super fast tool.
 
 Classes:
 ---
-+ Operator - 
++ Operator - parent class for all types of operator etc.
 
 Methods:
 ---
@@ -53,6 +53,3 @@ class Operator:
 
     def get_mid(self, arg_num=0):
         return self.__get_arg("mid_args", arg_num)
-
-new_algebra = Operator((("a"), ("b"), ("c")), a=0.1, b=1.0, c=0.2)
-print(new_algebra.get_left(1))
