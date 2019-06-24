@@ -40,6 +40,12 @@ class Matrix:
         for n in range(len(self.matrix)):
             result.append(self.matrix[n][n])
         return result
+    
+    def mult(self, mat=None):
+        if mat is None:
+            return __multiplication(self, self)
+        else:
+            return __multiplication(self, mat)
 
 
 class Vector(Matrix):
@@ -57,7 +63,7 @@ class Vector(Matrix):
         return str_self[:-2]+";\n"
 
     def norm_sq(self):
-        return Equation(multiplication(self.transpose(), self).get()[0][0])
+        return Equation(__multiplication(self.transpose(), self).get()[0][0])
 
     def to_matrix(self):
         result = []
@@ -79,7 +85,7 @@ class Vector(Matrix):
         return full_res
 
 
-def multiplication(M1=Matrix(), M2=Matrix(), func=str):
+def __multiplication(M1=Matrix(), M2=Matrix(), func=str):
     def wrap(val):
         if len(val) > 1:
             val = "(" + val + ")"
