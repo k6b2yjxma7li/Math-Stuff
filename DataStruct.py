@@ -160,14 +160,6 @@ class DataStruct(Helper):
     +   `csv` module
     +   `os` module
     """
-    path = ""
-    files = []
-    data = []
-    header = []
-    derivs = []
-    integrs = []
-    real_part = {"name": "", "values": []}
-    imag_part = {"name": "", "values": []}
 
     def __init__(self, path="", files=[]):
         """
@@ -179,6 +171,10 @@ class DataStruct(Helper):
         self.files = files
         self.data = []
         self.header = []
+        self.derivs = []
+        self.integrs = []
+        self.real_part = {"name": "", "values": []}
+        self.imag_part = {"name": "", "values": []}
 
     def get_files(self):
         """
@@ -399,25 +395,6 @@ class DataStruct(Helper):
                                                ylen=len(y_dat)))
         covariance = Helper.cov
         sigma = Helper.sigma
-
-        # def av(dat):
-        #     dat = tuple(dat)
-        #     return sum(dat)/len(dat)
-
-        # def covariance(x_dat, y_dat):
-        #     x_av, y_av = av(x_dat), av(y_dat)
-        #     cov = 0
-        #     for n in range(len(x_dat)):
-        #         cov += (x_dat[n] - x_av)*(y_dat[n] - y_av)
-        #     return cov
-
-        # def sigma(dat):
-        #     dat_av = av(dat)
-        #     sig_sq = 0
-        #     for n in range(len(dat)):
-        #         sig_sq += (dat[n] - dat_av)**2
-        #     return sig_sq**0.5
-
         return covariance(x_dat, y_dat)/(sigma(x_dat)*sigma(y_dat))
 
 
