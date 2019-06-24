@@ -245,160 +245,160 @@ class DataStruct(Helper):
             self.real_part["values"].append(tuple(dat[self.real_part["name"]]))
             self.imag_part["values"].append(tuple(dat[self.imag_part["name"]]))
 
-    @staticmethod
-    def deriv(x_arg, y_arg, func=Helper.arith_mean):
-        """
-        Description:
-        ---
-        Returns derivative of `y_arg` over `x_arg`.
-
-        Parameters:
-        ---
-        +   `x_arg` Real part of data [iterable]
-        +   `y_arg` Imag part of data [iterable]
-        Both parameters must be of the same lenght; if not `IndexError`
-        is raised.
-
-        Returns:
-        ---
-        List of derivative's data points of the same length as parameters'
-        length.
-
-        Raises:
-        ---
-        +   `IndexError: Parameters are not of same length ({len(x_arg)} and
-        {len(y_arg)}).` if parameters are not of equal length.
-        +   `ValueError: Parameter {arg} is too short: {len(arg)}.` if
-        parameter arg is not at least 2 elements long.
-        """
-        if len(x_arg) != len(y_arg):
-            raise IndexError("Parameters are not of same length ({lenx} "
-                             "and {leny}).".format(lenx=len(x_arg),
-                                                   leny=len(y_arg)))
-        if len(x_arg) < 2:
-            raise ValueError("Parameter x_arg is too short: "
-                             "{lenx}".format(lenx=len(x_arg)))
-        if len(y_arg) < 2:
-            raise ValueError("Parameter y_arg is too short: "
-                             "{lenx}.".format(lenx=len(x_arg)))
-        dydx = ()
-        for n in range(len(x_arg)-1):
-            dy = y_arg[n]-y_arg[n+1]
-            dx = x_arg[n]-x_arg[n+1]
-            dydx += (dy/dx, )
-        dydx += (func(dydx), )
-        print("Warning: last element of derivative iterable is an"
-              " arithmetic mean of all other datapoints by default.")
-        return dydx
-
-    @staticmethod
-    def integral(x_arg, y_arg, func=Helper.geom_mean):
-        """
-        Description:
-        ---
-        Returns integral of `y_arg` over `x_arg`.
-
-        Parameters:
-        ---
-        +   `x_arg` Real part of data [iterable]
-        +   `y_arg` Imag part of data [iterable]
-        Both parameters must be of the same lenght; if not `IndexError`
-        is raised.
-
-        Returns:
-        ---
-        List of integral's data points of the same length as parameters'
-        length.
-
-        Raises:
-        ---
-        +   `IndexError: Parameters are not of same length ({len(x_arg)} and
-        {len(y_arg)}).` if parameters are not of equal length.
-        +   `ValueError: Parameter {arg} is too short: {len(arg)}.` if
-        parameter arg is not at least 2 elements long.
-        """
-        if len(x_arg) != len(y_arg):
-            raise IndexError("Parameters are not of same length ({lenx} "
-                             "and {leny}).".format(lenx=len(x_arg),
-                                                   leny=len(y_arg)))
-        if len(x_arg) < 2:
-            raise ValueError("Parameter x_arg is too short: "
-                             "{lenx}".format(lenx=len(x_arg)))
-        if len(y_arg) < 2:
-            raise ValueError("Parameter y_arg is too short: "
-                             "{lenx}.".format(lenx=len(x_arg)))
-        int_ydx = ()
-        ydx = ()
-        for n in range(len(x_arg)-1):
-            dx = x_arg[n+1] - x_arg[n]
-            dy = y_arg[n]
-            ydx += (dx*dy, )
-            int_ydx += (sum(ydx), )
-        int_ydx += (func(int_ydx, abs)*dx, )
-        print("Warning: last element of derivative iterable is an"
-              " geometric mean of all other datapoints by default.")
-        return int_ydx
-
-    @staticmethod
-    def nearest(iterable, value, order=0):
-        """
-        Description:
-        ---
-        Returns closest value to the specified `value`argument by calculating:
-        abs([`iterable`]-`value`)
-        and sorting an output. `order` specifies index of
-        sorted iterable (n-th closest value).
-        """
-        abs_val = []
-        abs_copy = []
-        for it in iterable:
-            abs_val.append(abs(it - value))
-            abs_copy.append(abs(it - value))
-        abs_copy = list(set(abs_copy))
-        abs_copy.sort()
-        value_found = -1
-        return_tuple = ()
-        while value_found is not None:
-            try:
-                value_found = abs_val.index(abs_copy[order], value_found+1)
-                return_tuple += (value_found, )
-            except ValueError:
-                if len(return_tuple) < 2:
-                    return value_found
-                value_found = None
-        return return_tuple
-
-    @staticmethod
-    def pearson(x_dat, y_dat):
-        """
-        Description:
-        ---
-        Pearson correlation coefficient is a method of
-        describing correlation between two data sets as
-        a single value between `-1` and `1`, where `-1` is a full
-        negative correlation and `1` is full positive correlation.
-        `0` is representing two non-correlated sets.
-
-        Parameters:
-        ---
-        +   `x_dat` first data set (iterable of numerical values)
-        +   `y_dat` second data set (iterable of numerical values)
-
-        Returns:
-        ---
-        Pearson correlation coefficient (float).
-        """
-        if len(x_dat) != len(y_dat):
-            raise ValueError("""Parameters are not of equal length:
-            `x_dat` of length {xlen}
-            `y_dat` of length {ylen}""".format(xlen=len(x_dat),
-                                               ylen=len(y_dat)))
-        covariance = Helper.cov
-        sigma = Helper.sigma
-        return covariance(x_dat, y_dat)/(sigma(x_dat)*sigma(y_dat))
-
 
 # MODULE FUNCTIONS
+
+def deriv(x_arg, y_arg, func=Helper.arith_mean):
+    """
+    Description:
+    ---
+    Returns derivative of `y_arg` over `x_arg`.
+
+    Parameters:
+    ---
+    +   `x_arg` Real part of data [iterable]
+    +   `y_arg` Imag part of data [iterable]
+    Both parameters must be of the same lenght; if not `IndexError`
+    is raised.
+
+    Returns:
+    ---
+    List of derivative's data points of the same length as parameters'
+    length.
+
+    Raises:
+    ---
+    +   `IndexError: Parameters are not of same length ({len(x_arg)} and
+    {len(y_arg)}).` if parameters are not of equal length.
+    +   `ValueError: Parameter {arg} is too short: {len(arg)}.` if
+    parameter arg is not at least 2 elements long.
+    """
+    if len(x_arg) != len(y_arg):
+        raise IndexError("Parameters are not of same length ({lenx} "
+                         "and {leny}).".format(lenx=len(x_arg),
+                                               leny=len(y_arg)))
+    if len(x_arg) < 2:
+        raise ValueError("Parameter x_arg is too short: "
+                         "{lenx}".format(lenx=len(x_arg)))
+    if len(y_arg) < 2:
+        raise ValueError("Parameter y_arg is too short: "
+                         "{lenx}.".format(lenx=len(x_arg)))
+    dydx = ()
+    for n in range(len(x_arg)-1):
+        dy = y_arg[n]-y_arg[n+1]
+        dx = x_arg[n]-x_arg[n+1]
+        dydx += (dy/dx, )
+    dydx += (func(dydx), )
+    print("Warning: last element of derivative iterable is an"
+          " arithmetic mean of all other datapoints by default.")
+    return dydx
+
+
+def integral(x_arg, y_arg, func=Helper.geom_mean):
+    """
+    Description:
+    ---
+    Returns integral of `y_arg` over `x_arg`.
+
+    Parameters:
+    ---
+    +   `x_arg` Real part of data [iterable]
+    +   `y_arg` Imag part of data [iterable]
+    Both parameters must be of the same lenght; if not `IndexError`
+    is raised.
+
+    Returns:
+    ---
+    List of integral's data points of the same length as parameters'
+    length.
+
+    Raises:
+    ---
+    +   `IndexError: Parameters are not of same length ({len(x_arg)} and
+    {len(y_arg)}).` if parameters are not of equal length.
+    +   `ValueError: Parameter {arg} is too short: {len(arg)}.` if
+    parameter arg is not at least 2 elements long.
+    """
+    if len(x_arg) != len(y_arg):
+        raise IndexError("Parameters are not of same length ({lenx} "
+                         "and {leny}).".format(lenx=len(x_arg),
+                                               leny=len(y_arg)))
+    if len(x_arg) < 2:
+        raise ValueError("Parameter x_arg is too short: "
+                         "{lenx}".format(lenx=len(x_arg)))
+    if len(y_arg) < 2:
+        raise ValueError("Parameter y_arg is too short: "
+                         "{lenx}.".format(lenx=len(x_arg)))
+    int_ydx = ()
+    ydx = ()
+    for n in range(len(x_arg)-1):
+        dx = x_arg[n+1] - x_arg[n]
+        dy = y_arg[n]
+        ydx += (dx*dy, )
+        int_ydx += (sum(ydx), )
+    int_ydx += (func(int_ydx, abs)*dx, )
+    print("Warning: last element of derivative iterable is an"
+          " geometric mean of all other datapoints by default.")
+    return int_ydx
+
+
+def nearest(iterable, value, order=0):
+    """
+    Description:
+    ---
+    Returns closest value to the specified `value`argument by calculating:
+    abs([`iterable`]-`value`)
+    and sorting an output. `order` specifies index of
+    sorted iterable (n-th closest value).
+    """
+    abs_val = []
+    abs_copy = []
+    for it in iterable:
+        abs_val.append(abs(it - value))
+        abs_copy.append(abs(it - value))
+    abs_copy = list(set(abs_copy))
+    abs_copy.sort()
+    value_found = -1
+    return_tuple = ()
+    while value_found is not None:
+        try:
+            value_found = abs_val.index(abs_copy[order], value_found+1)
+            return_tuple += (value_found, )
+        except ValueError:
+            if len(return_tuple) < 2:
+                return value_found
+            value_found = None
+    return return_tuple
+
+
+def pearson(x_dat, y_dat):
+    """
+    Description:
+    ---
+    Pearson correlation coefficient is a method of
+    describing correlation between two data sets as
+    a single value between `-1` and `1`, where `-1` is a full
+    negative correlation and `1` is full positive correlation.
+    `0` is representing two non-correlated sets.
+
+    Parameters:
+    ---
+    +   `x_dat` first data set (iterable of numerical values)
+    +   `y_dat` second data set (iterable of numerical values)
+
+    Returns:
+    ---
+    Pearson correlation coefficient (float).
+    """
+    if len(x_dat) != len(y_dat):
+        raise ValueError(("Parameters are not of equal length:" +
+                          "`x_dat` of length {xlen}" +
+                          "`y_dat` of length {ylen}").format(xlen=len(x_dat),
+                                                             ylen=len(y_dat)))
+    covariance = Helper.cov
+    sigma = Helper.sigma
+    return covariance(x_dat, y_dat)/(sigma(x_dat)*sigma(y_dat))
+
 
 def listing(path="."):
     """
