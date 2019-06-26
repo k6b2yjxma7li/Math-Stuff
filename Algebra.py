@@ -1,6 +1,22 @@
 import numpy as np
 
 
+"""
+`Algebra` Module
+---
+Description
+---
+Module for linear algebra of different approach. It uses strings and
+evaluations to compute equations with scalars, vectors and matrices.
+
+Disclaimer
+---
+Methods and classes of this module are not reinforced by error handling
+so any deviations from the main idea of equations may result in errors,
+bugs and whole spectrum of other problems. Good luck.
+"""
+
+
 class Matrix:
     def __init__(self, matrix=[], func=str):
         self._matrix = ()
