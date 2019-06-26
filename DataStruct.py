@@ -1,6 +1,13 @@
 import csv
 import os
 
+global communicate
+
+communicate = (("Warning: last element of derivative iterable is an"
+                " arithmetic mean of all other datapoints by default.\n"),
+               ("Warning: last element of derivative iterable is an"
+                " geometric mean of all other datapoints by default.\n"))
+
 
 # HELPER CLASS
 
@@ -289,8 +296,7 @@ def deriv(x_arg, y_arg, func=Helper.arith_mean):
         dx = x_arg[n]-x_arg[n+1]
         dydx += (dy/dx, )
     dydx += (func(dydx), )
-    print("Warning: last element of derivative iterable is an"
-          " arithmetic mean of all other datapoints by default.")
+    print(communicate[0], end="")
     return dydx
 
 
@@ -337,8 +343,7 @@ def integral(x_arg, y_arg, func=Helper.geom_mean):
         ydx += (dx*dy, )
         int_ydx += (sum(ydx), )
     int_ydx += (func(int_ydx, abs)*dx, )
-    print("Warning: last element of derivative iterable is an"
-          " geometric mean of all other datapoints by default.")
+    print(communicate[1], end="")
     return int_ydx
 
 
@@ -543,3 +548,16 @@ def csv_manual(path="."):
         if ans > len(file_list):
             print(f"No such option: {ans}.")
     return None
+
+
+def mute():
+    """
+    `DataStruct` module method
+    ---
+
+    Description:
+    ---
+    Muting communicates about defaults in methodes.
+    """
+    global communicate
+    communicate = tuple("" for com in communicate)
