@@ -11,6 +11,22 @@ communicate = (("Warning: last element of derivative iterable is an"
 
 # HELPER CLASS
 
+"""
+DataStruct Module
+---
+
+Description:
+---
+This module have been created to collect all methods, that were needed to
+manage and modify data, especially spectral. It contains some statistical
+methods but also analitical ones.
+
+To effectively manage data files there are listing and converting functions.
+Most of them created to be quite easy to use and error proof, although
+all of these can be broken. Try not to do it.
+"""
+
+
 class Helper:
     """
     `DataStruct` Helper class
@@ -407,11 +423,11 @@ def pearson(x_dat, y_dat):
 
 def listing(path="."):
     """
-    `DataStruct` module methode
+    `DataStruct` module method
     ---
     Descritpion:
     ---
-    This methode returns a `dict` of files and directories in
+    This method returns a `dict` of files and directories in
     specified `path`.
 
     Parameters:
@@ -527,7 +543,7 @@ def csv_manual(path="."):
     None
 
     If there is an error occuring it must be traced back to
-    `DataStruct.listing` or `DataStruct.csv_convert` methodes.
+    `DataStruct.listing` or `DataStruct.csv_convert` methods.
     """
     file_list = listing(path)['files']
     pos = 1
@@ -557,7 +573,7 @@ def mute():
 
     Description:
     ---
-    Muting communicates about defaults in methodes.
+    Muting communicates about defaults in methods.
     """
     global communicate
     communicate = tuple("" for com in communicate)
