@@ -3,3 +3,4 @@ notatka
 # Rozszerzenia plików, które nie mają być gitowane
 *.csv
 .data
+Main.py
