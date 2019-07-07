@@ -37,6 +37,13 @@ class Helper:
     `DataStruct` but are used by this class.
     """
     @staticmethod
+    def gravity_mean(data):
+        def gravity(arg_num):
+            return 1/(arg_num+1)**2
+        gravial = [gravity(n) for n in range(len(data))]
+        return sum([data[n]*gravial[n]/sum(gravial) for n in range(len(data))])
+
+    @staticmethod
     def arith_mean(data):
         """
         `DataStruct` helper function
@@ -271,7 +278,7 @@ class DataStruct(Helper):
 
 # MODULE FUNCTIONS
 
-def deriv(x_arg, y_arg, func=Helper.arith_mean):
+def deriv(x_arg, y_arg, func=Helper.gravity_mean):
     """
     Description:
     ---
@@ -613,5 +620,5 @@ def angular(x_arg, y_arg):
     a1 = [math.atan(-1/I) for I in d1]
     a2 = [math.atan(-1/I) for I in d2]
 
-    ang = [abs(a2[n] - a1[n])/math.tau for n in range(len(d1))]
+    ang = [abs(a2[n] + a1[n])/math.tau for n in range(len(d1))]
     return ang
