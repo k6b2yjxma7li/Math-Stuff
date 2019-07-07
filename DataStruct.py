@@ -577,3 +577,41 @@ def mute():
     """
     global communicate
     communicate = tuple("" for com in communicate)
+
+
+def angular(x_arg, y_arg):
+    """
+    `DataStruct` module method
+    ---
+
+    Description:
+    ---
+    Angle coeff of two-way derivative
+
+    Parameters:
+    ---
+    + `path` - specifies path to search for file to be converted
+    Raises:
+    ---
+    None
+
+    Returns:
+    ---
+    None
+
+    If there is an error occuring it must be traced back to
+    `DataStruct.listing` or `DataStruct.csv_convert` methods.
+    """
+    import math
+    f_inte = [y_arg[len(y_arg)-1-n] for n in range(len(y_arg))]
+    n_inte = y_arg
+
+    d1 = deriv(x_arg, n_inte)
+    d2 = deriv(x_arg, f_inte)
+    d2 = [d2[len(d2)-1-n] for n in range(len(d2))]
+
+    a1 = [math.atan(-1/I) for I in d1]
+    a2 = [math.atan(-1/I) for I in d2]
+
+    ang = [abs(a2[n] - a1[n])/math.tau for n in range(len(d1))]
+    return ang
