@@ -1,19 +1,35 @@
 import numpy as np
 
 
+"""
+`Algebra` Module
+---
+Description
+---
+Module for linear algebra of different approach. It uses strings and
+evaluations to compute equations with scalars, vectors and matrices.
+
+Disclaimer
+---
+Methods and classes of this module are not reinforced by error handling
+so any deviations from the main idea of equations may result in errors,
+bugs and whole spectrum of other problems. Good luck.
+"""
+
+
 class Matrix:
     def __init__(self, matrix=[], func=str):
-        self.matrix = []
-        self.func = func
+        self._matrix = ()
+        self._func = func
         for k in range(len(matrix)):
-            self.matrix.append([])
+            self._matrix += ((),)
             for l in range(len(matrix[k])):
-                self.matrix[k].append(func(matrix[k][l]))
+                self._matrix[k] += (func(matrix[k][l]),)
 
     def __str__(self):
         str_self = ""
-        print(f"dim:{len(self.matrix), len(self.matrix[0])}")
-        for row in self.matrix:
+        print(f"dim:{len(self._matrix), len(self._matrix[0])}")
+        for row in self._matrix:
             str_self += row.__str__() + ",\n"
         return str_self[:-2]+";\n"
 
@@ -22,25 +38,25 @@ class Matrix:
         Transposition of matrix.
         """
         # print(f"dim:{len(self.matrix), len(self.matrix[0])}")
-        result = []
-        for k in range(len(self.matrix)):
-            result.append([])
-            for l in range(len(self.matrix[k])):
-                result[k].append(self.matrix[l][k])
+        result = ()
+        for k in range(len(self._matrix)):
+            result += ((),)
+            for l in range(len(self._matrix[k])):
+                result[k] += (self._matrix[l][k],)
         return self.__class__(result)
 
     def get(self):
-        return self.matrix
+        return self._matrix
 
     def get_func(self):
-        return self.func
+        return self._func
 
     def get_diag(self):
-        result = []
-        for n in range(len(self.matrix)):
-            result.append(self.matrix[n][n])
+        result = ()
+        for n in range(len(self._matrix)):
+            result += (self._matrix[n][n],)
         return result
-    
+
     def mult(self, mat=None):
         if mat is None:
             return multiplication(self, self)
@@ -50,36 +66,36 @@ class Matrix:
 
 class Vector(Matrix):
     def __init__(self, matrix=[], func=str):
-        self.matrix = []
-        self.func = func
+        self._matrix = ()
+        self._func = func
         for n in range(len(matrix)):
-            self.matrix.append([func(matrix[n])])
+            self._matrix += ((func(matrix[n])), )
 
     def __str__(self):
         str_self = ""
-        print(f"dim:{len(self.matrix), len(self.matrix[0])}")
-        for n in range(len(self.matrix)):
-            str_self += self.matrix[n].__str__()+",\n"
+        print(f"dim:{len(self._matrix), len(self._matrix[0])}")
+        for n in range(len(self._matrix)):
+            str_self += self._matrix[n].__str__()+",\n"
         return str_self[:-2]+";\n"
 
     def norm_sq(self):
         return Equation(multiplication(self.transpose(), self).get()[0][0])
 
     def to_matrix(self):
-        result = []
-        for k in range(len(self.matrix)):
-            result.append([])
-            for l in range(len(self.matrix)):
+        result = ()
+        for k in range(len(self._matrix)):
+            result += ((),)
+            for l in range(len(self._matrix)):
                 if k == l:
-                    result[k].append(self.matrix[k][0])
+                    result[k] += (self._matrix[k][0],)
                 else:
-                    result[k].append("0")
+                    result[k] += ("0",)
         return Matrix(result)
 
     def transpose(self):
-        result = [[]]
-        for e in self.matrix:
-            result[0].append(e[0])
+        result = ((),)
+        for elmnt in self._matrix:
+            result[0] += ((elmnt[0],),)
         full_res = Matrix(result)
         full_res.__class__ = Vector
         return full_res
@@ -92,9 +108,9 @@ def multiplication(M1=Matrix(), M2=Matrix(), func=str):
         return val
     M1 = M1.get()
     M2 = M2.get()
-    result = []
+    result = ()
     for k in range(len(M1)):
-        result.append([])
+        result += ((),)
         for l in range(len(M2[0])):
             element = ""
             for m in range(len(M1[0])):
@@ -110,28 +126,28 @@ def multiplication(M1=Matrix(), M2=Matrix(), func=str):
                 element = element.replace("(1 * ", "(")
             if len(element) == 0:
                 element = "0 + "
-            result[k].append(func(element[:-3]))
+            result[k] += (func(element[:-3]),)
     return Matrix(result)
 
 
 def identity(obj):
-    result = []
+    result = ()
     if obj.__class__ == Matrix:
         for n in range(len(obj.get())):
-            result.append([])
+            result += ((),)
             for k in range(len(obj.get()[n])):
                 if n == k:
-                    result[n].append(obj.get()[n][n])
+                    result[n] += (obj.get()[n][n],)
                 else:
-                    result[n].append("0")
+                    result[n] += ("0",)
     if obj.__class__ == Vector:
         for n in range(len(obj.get())):
-            result.append([])
+            result += ((),)
             for k in range(len(obj.get())):
                 if n == k:
-                    result[n].append(obj.get()[n])
+                    result[n] += (obj.get()[n],)
                 else:
-                    result[n].append("0")
+                    result[n] += ("0",)
     return Matrix(result)
 
 

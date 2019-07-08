@@ -1,8 +1,31 @@
 import csv
 import os
 
+global communicate
+
+communicate = (("Warning: last element of derivative iterable is an"
+                " arithmetic mean of all other datapoints by default.\n"),
+               ("Warning: last element of derivative iterable is an"
+                " geometric mean of all other datapoints by default.\n"))
+
 
 # HELPER CLASS
+
+"""
+DataStruct Module
+---
+
+Description:
+---
+This module have been created to collect all methods, that were needed to
+manage and modify data, especially spectral. It contains some statistical
+methods but also analitical ones.
+
+To effectively manage data files there are listing and converting functions.
+Most of them created to be quite easy to use and error proof, although
+all of these can be broken. Try not to do it.
+"""
+
 
 class Helper:
     """
@@ -13,6 +36,27 @@ class Helper:
     This class contains helper functions that are not directly needed for
     `DataStruct` but are used by this class.
     """
+    @staticmethod
+    def gravity_mean(data, func=lambda x: 1/(x+1)**2):
+        """
+        `DataStruct` helper function
+        ---
+        Description:
+        ---
+        Calculates gravitational mean of elements in `data`.
+
+        Raises:
+        ---
+        `TypeError: Argument is not a valid iterable.` if argument is not a
+        type like `tuple`, `list` or `set`.
+        """
+        try:
+            data = tuple(data)
+            __g = [func(n) for n in range(len(data))]
+            return sum([data[n]*__g[n]/sum(__g) for n in range(len(data))])
+        except Exception:
+            raise TypeError("Argument is not a valid numerical iterable.")
+
     @staticmethod
     def arith_mean(data):
         """
@@ -248,7 +292,7 @@ class DataStruct(Helper):
 
 # MODULE FUNCTIONS
 
-def deriv(x_arg, y_arg, func=Helper.arith_mean):
+def deriv(x_arg, y_arg, func=Helper.gravity_mean):
     """
     Description:
     ---
@@ -288,9 +332,10 @@ def deriv(x_arg, y_arg, func=Helper.arith_mean):
         dy = y_arg[n]-y_arg[n+1]
         dx = x_arg[n]-x_arg[n+1]
         dydx += (dy/dx, )
-    dydx += (func(dydx), )
-    print("Warning: last element of derivative iterable is an"
-          " arithmetic mean of all other datapoints by default.")
+        c_dydx = list(dydx).copy()
+        c_dydx.reverse()
+    dydx += (func(c_dydx), )
+    print(communicate[0], end="")
     return dydx
 
 
@@ -337,8 +382,7 @@ def integral(x_arg, y_arg, func=Helper.geom_mean):
         ydx += (dx*dy, )
         int_ydx += (sum(ydx), )
     int_ydx += (func(int_ydx, abs)*dx, )
-    print("Warning: last element of derivative iterable is an"
-          " geometric mean of all other datapoints by default.")
+    print(communicate[1], end="")
     return int_ydx
 
 
@@ -402,11 +446,11 @@ def pearson(x_dat, y_dat):
 
 def listing(path="."):
     """
-    `DataStruct` module methode
+    `DataStruct` module method
     ---
     Descritpion:
     ---
-    This methode returns a `dict` of files and directories in
+    This method returns a `dict` of files and directories in
     specified `path`.
 
     Parameters:
@@ -522,7 +566,7 @@ def csv_manual(path="."):
     None
 
     If there is an error occuring it must be traced back to
-    `DataStruct.listing` or `DataStruct.csv_convert` methodes.
+    `DataStruct.listing` or `DataStruct.csv_convert` methods.
     """
     file_list = listing(path)['files']
     pos = 1
@@ -543,3 +587,55 @@ def csv_manual(path="."):
         if ans > len(file_list):
             print(f"No such option: {ans}.")
     return None
+
+
+def mute():
+    """
+    `DataStruct` module method
+    ---
+
+    Description:
+    ---
+    Muting communicates about defaults in methods.
+    """
+    global communicate
+    communicate = tuple("" for com in communicate)
+
+
+def angular(x_arg, y_arg):
+    """
+    `DataStruct` module method
+    ---
+
+    Description:
+    ---
+    Angle coeff of two-way derivative
+
+    Parameters:
+    ---
+    + `path` - specifies path to search for file to be converted
+    Raises:
+    ---
+    None
+
+    Returns:
+    ---
+    None
+
+    If there is an error occuring it must be traced back to
+    `DataStruct.listing` or `DataStruct.csv_convert` methods.
+    """
+    import math
+    n_inte = y_arg
+    y_arg.reverse()
+    f_inte = y_arg
+
+    d1 = deriv(x_arg, n_inte)
+    d2 = deriv(x_arg, f_inte)
+    d2.reverse
+
+    a1 = [math.atan(-1/I) for I in d1]
+    a2 = [math.atan(-1/I) for I in d2]
+
+    ang = [abs(a2[n] + a1[n])/math.tau for n in range(len(d1))]
+    return ang
