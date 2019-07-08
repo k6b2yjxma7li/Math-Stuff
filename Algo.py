@@ -14,6 +14,9 @@ Python 3.6.8 (64-bit) and with Visual Studio Code, therefore it gives no
 errors nor warnings with this setup.
 """
 
+global N_peaks
+N_peaks = 20
+
 
 def lorentz(A, B, x_arg, x0=0.0):
     """
@@ -79,7 +82,7 @@ def observe(y_arg, x_arg):
     """
     sum_time = 0.0
     data_set = []
-    for akn in range(20):                           # finding 20 Lorentz curves
+    for akn in range(N_peaks):                      # finding 20 Lorentz curves
         start = time.process_time()
         swp = peak_find(y_arg)                      # peak finding
         b_val = 0
@@ -110,25 +113,31 @@ def observe(y_arg, x_arg):
     return data_set
 
 
-start = time.process_time()
-l1 = observe(inte[0], wave[0])              # main algorith call
-lor = [0 for n in range(len(wave[0]))]      # init of estimation dataset
+def main():
+    start = time.process_time()
+    l1 = observe(inte[0], wave[0])              # main algorith call
+    lor = [0 for n in range(len(wave[0]))]      # init of estimation dataset
 
-# this gonna take some time, but also it will count it!
-sum_time = 0.0
-main = time.process_time()
-for l in range(len(l1)):                    # for-loop to sum all Lorentzs
-    step = time.process_time()
-    lor = [lor[n] + lorentz(l1[l][0],
-                            l1[l][1],
-                            wave[0],
-                            l1[l][2])[n] for n in range(len(wave[0]))]
-    stop = time.process_time()
-    sum_time += stop-step
-    print(f"ETA: {stop-main - len(l1)*sum_time/(l+1)}")
+    # this gonna take some time, but also it will count it!
+    sum_time = 0.0
+    main_time = time.process_time()
+    for l in range(len(l1)):                    # for-loop to sum all Lorentzs
+        step = time.process_time()
+        lor = [lor[n] + lorentz(l1[l][0],
+                                l1[l][1],
+                                wave[0],
+                                l1[l][2])[n] for n in range(len(wave[0]))]
+        stop = time.process_time()
+        sum_time += stop-step
+        print(f"ETA: {stop-main_time - len(l1)*sum_time/(l+1)}")
 
-# final results presentation
-plt.plot(wave[0], inte[0], linewidth=0.5)
-plt.plot(wave[0], lor, linewidth=0.5)
-print(f"Time consumption: {time.process_time()-start}")
-plt.show()
+    # final results presentation
+    plt.plot(wave[0], inte[0], linewidth=0.5)
+    plt.plot(wave[0], lor, linewidth=0.5)
+    print(f"Time consumption: {time.process_time()-start}")
+    plt.show()
+
+
+def set_globals(numb_peaks=1):
+    global N_peaks
+    N_peaks = numb_peaks
