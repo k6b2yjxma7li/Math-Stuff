@@ -141,3 +141,4 @@ def main():
 def set_globals(numb_peaks=1):
     global N_peaks
     N_peaks = numb_peaks
+    return f"Number of peaks: {N_peaks}\n"
