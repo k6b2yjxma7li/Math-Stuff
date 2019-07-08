@@ -37,11 +37,25 @@ class Helper:
     `DataStruct` but are used by this class.
     """
     @staticmethod
-    def gravity_mean(data):
-        def gravity(arg_num):
-            return 1/(arg_num+1)**2
-        gravial = [gravity(n) for n in range(len(data))]
-        return sum([data[n]*gravial[n]/sum(gravial) for n in range(len(data))])
+    def gravity_mean(data, func=lambda x: 1/(x+1)**2):
+        """
+        `DataStruct` helper function
+        ---
+        Description:
+        ---
+        Calculates gravitational mean of elements in `data`.
+
+        Raises:
+        ---
+        `TypeError: Argument is not a valid iterable.` if argument is not a
+        type like `tuple`, `list` or `set`.
+        """
+        try:
+            data = tuple(data)
+            __g = [func(n) for n in range(len(data))]
+            return sum([data[n]*__g[n]/sum(__g) for n in range(len(data))])
+        except Exception:
+            raise TypeError("Argument is not a valid numerical iterable.")
 
     @staticmethod
     def arith_mean(data):
@@ -318,7 +332,9 @@ def deriv(x_arg, y_arg, func=Helper.gravity_mean):
         dy = y_arg[n]-y_arg[n+1]
         dx = x_arg[n]-x_arg[n+1]
         dydx += (dy/dx, )
-    dydx += (func(dydx), )
+        c_dydx = list(dydx).copy()
+        c_dydx.reverse()
+    dydx += (func(c_dydx), )
     print(communicate[0], end="")
     return dydx
 
@@ -610,12 +626,13 @@ def angular(x_arg, y_arg):
     `DataStruct.listing` or `DataStruct.csv_convert` methods.
     """
     import math
-    f_inte = [y_arg[len(y_arg)-1-n] for n in range(len(y_arg))]
     n_inte = y_arg
+    y_arg.reverse()
+    f_inte = y_arg
 
     d1 = deriv(x_arg, n_inte)
     d2 = deriv(x_arg, f_inte)
-    d2 = [d2[len(d2)-1-n] for n in range(len(d2))]
+    d2.reverse
 
     a1 = [math.atan(-1/I) for I in d1]
     a2 = [math.atan(-1/I) for I in d2]
