@@ -1,18 +1,18 @@
+"""
+This is main algorithm for finding fit of series of Lorentz's curves
+to a given spectral data, especially Raman.
+
+Following script had been written by rules of pylama code audit (W291)
+Python 3.6.8 (64-bit) and with Visual Studio Code, therefore it gives no
+errors nor warnings with this setup.
+"""
+
 import matplotlib.pyplot as plt
 from __Main import wave             # wave data for specified exps
 from __Main import inte             # intensity data
 import DataStruct as ds             # to use some of functions
 import math
 import time                         # estimating elapsed time
-
-"""
-This is main algorithm file. It takes data prepared in __Main
-to further manage it as spectral data.
-
-Following script had been written by rules of pylama code audit (W291)
-Python 3.6.8 (64-bit) and with Visual Studio Code, therefore it gives no
-errors nor warnings with this setup.
-"""
 
 global N_peaks
 N_peaks = 20
@@ -114,6 +114,13 @@ def observe(y_arg, x_arg):
 
 
 def main():
+    """
+    `Algo` main method
+    ---
+    Description:
+    ---
+    Starts with timer to estimate fitting evaluation.
+    """
     start = time.process_time()
     l1 = observe(inte[0], wave[0])              # main algorith call
     lor = [0 for n in range(len(wave[0]))]      # init of estimation dataset
@@ -123,10 +130,11 @@ def main():
     main_time = time.process_time()
     for l in range(len(l1)):                    # for-loop to sum all Lorentzs
         step = time.process_time()
-        lor = [lor[n] + lorentz(l1[l][0],
-                                l1[l][1],
-                                wave[0],
-                                l1[l][2])[n] for n in range(len(wave[0]))]
+        for n in range(len(wave[0])):
+            lor[n] += lorentz(l1[l][0],
+                              l1[l][1],
+                              wave[0],
+                              l1[l][2])[n]
         stop = time.process_time()
         sum_time += stop-step
         print(f"ETA: {stop-main_time - len(l1)*sum_time/(l+1)}")
@@ -139,6 +147,9 @@ def main():
 
 
 def set_globals(numb_peaks=1):
+    """
+
+    """
     global N_peaks
     N_peaks = numb_peaks
     return f"Number of peaks: {N_peaks}\n"
