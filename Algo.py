@@ -14,7 +14,6 @@ import DataStruct as ds             # to use some of functions
 import math
 import time                         # estimating elapsed time
 
-global N_peaks
 N_peaks = 20
 
 
@@ -119,18 +118,22 @@ def main():
     ---
     Description:
     ---
-    Starts with timer to estimate fitting evaluation.
+    Uses `Algo.observe` method to fit Lorentz's curves to data, then
+    generates fit points from return of `observe`. For all steps it
+    calculates time needed to complete the task. Finally it presents
+    results in form of a graph with three lines:
     """
     start = time.process_time()
     l1 = observe(inte[0], wave[0])              # main algorith call
-    lor = [0 for n in range(len(wave[0]))]      # init of estimation dataset
+    w_len = len(wave[0])
+    lor = [0 for n in range(w_len)]      # init of estimation dataset
 
     # this gonna take some time, but also it will count it!
     sum_time = 0.0
     main_time = time.process_time()
     for l in range(len(l1)):                    # for-loop to sum all Lorentzs
         step = time.process_time()
-        for n in range(len(wave[0])):
+        for n in range(w_len):
             lor[n] += lorentz(l1[l][0],
                               l1[l][1],
                               wave[0],
@@ -142,14 +145,18 @@ def main():
     # final results presentation
     plt.plot(wave[0], inte[0], linewidth=0.5)
     plt.plot(wave[0], lor, linewidth=0.5)
+    plt.plot(wave[0], [inte[0][n]-lor[n] for n in range(w_len)], linewidth=0.5)
+    plt.legend(["Data points", "Fit", "Error"])
     print(f"Time consumption: {time.process_time()-start}")
     plt.show()
 
 
 def set_globals(numb_peaks=1):
     """
-
+    `Algo` method
     """
+    # for key, value in kwargs.items():
+    #     global
     global N_peaks
     N_peaks = numb_peaks
     return f"Number of peaks: {N_peaks}\n"
