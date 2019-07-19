@@ -285,21 +285,14 @@ class DataStruct(Helper):
                     for n in range(len(data[dat])):
                         data[dat][n] /= constans
 
-    def separation(self, re_header="", im_header=""):
-        if re_header and im_header:
-            R_header = re_header
-            I_header = im_header
-        elif self.header:
-            R_header = self.header[0]
-            I_header = self.header[1]
-        else:
-            R_header = input("Set arbitrary real-part header:")
-            I_header = input("Set arbitrary imag-part header:")
-        self.real_part['name'] = R_header
-        self.imag_part['name'] = I_header
-        for dat in self.data:
-            self.real_part["values"].append(tuple(dat[R_header]))
-            self.imag_part["values"].append(tuple(dat[I_header]))
+    def separation(self):
+        pass
+        # if
+        # for dat in self.data:
+        #     self.real_part["values"].append(tuple(dat[R_header]))
+        #     self.imag_part["values"].append(tuple(dat[I_header]))
+        # self.real_part['name'] = R_header
+        # self.imag_part['name'] = I_header
 
     def read_routine(self):
         self.__init__(self.path)
@@ -462,6 +455,8 @@ def pearson(x_dat, y_dat):
     return covariance(x_dat, y_dat)/(sigma(x_dat)*sigma(y_dat))
 
 
+# MAINTAINANCE FUNCTIONS
+
 def listing(path="."):
     """
     `DataStruct` module method
@@ -514,7 +509,7 @@ def listing(path="."):
     return this_dir
 
 
-def csv_convert(path=".", file_name="", new_path="."):
+def csv_convert(path=".", file_name="", new_path=".", header=""):
     """
     `DataStruct` module method
     ---
@@ -537,7 +532,7 @@ def csv_convert(path=".", file_name="", new_path="."):
     ---
     + 0 - if successful
     + 1 - if `FileNotFoundError` error occurres while trying to
-    find and open both input and output files
+    find and open one of input or output files
     + 2 - if data from input file is not covertable to CSV format
     + -1 - if one or both paths are not str-convertible
     """
@@ -552,6 +547,7 @@ def csv_convert(path=".", file_name="", new_path="."):
         new_csv = open(new_path+file_name.split('.')[0]+'.csv', 'w')
     except FileNotFoundError:
         return 1
+    print(header, end="", file=new_csv)
     while True:
         try:
             line = next(old_file).split()
@@ -575,7 +571,7 @@ def csv_manual(path="."):
 
     Description:
     ---
-    Manual searching and converting files from table format to CSV.
+    Manual searching and converting files from ASCII table format to CSV.
 
     Parameters:
     ---
@@ -603,12 +599,16 @@ def csv_manual(path="."):
         ans = input("Option: ")
         try:
             ans = int(ans)
-            print(file_list[ans-1])
-            csv_convert(path, file_list[ans-1])
+            if ans > len(file_list):
+                print(f"No such option: {ans}.")
+            else:
+                print(file_list[ans-1])
+                nu_path = input("Enter new directory: ")
+                if nu_path == "":
+                    nu_path = "."
+                csv_convert(path, file_list[ans-1], nu_path)
         except ValueError:
-            break
-        if ans > len(file_list):
-            print(f"No such option: {ans}.")
+            pass
     return None
 
 
