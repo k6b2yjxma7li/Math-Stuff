@@ -1,16 +1,3 @@
-import csv
-import os
-
-global communicate
-
-communicate = (("Warning: last element of derivative iterable is an"
-                " arithmetic mean of all other datapoints by default.\n"),
-               ("Warning: last element of derivative iterable is an"
-                " geometric mean of all other datapoints by default.\n"))
-
-
-# HELPER CLASS
-
 """
 DataStruct Module
 ---
@@ -25,6 +12,19 @@ To effectively manage data files there are listing and converting functions.
 Most of them created to be quite easy to use and error proof, although
 all of these can be broken. Try not to do it.
 """
+
+import csv
+import os
+
+global communicate
+
+communicate = (("Warning: last element of derivative iterable is an"
+                " arithmetic mean of all other datapoints by default.\n"),
+               ("Warning: last element of derivative iterable is an"
+                " geometric mean of all other datapoints by default.\n"))
+
+
+# HELPER CLASS
 
 
 class Helper:
@@ -234,6 +234,7 @@ class DataStruct(Helper):
         out of CSV files.
         """
         files = listing(self.path)['files']
+        self.files = []
         for file in files:
             if '.csv' in file:
                 self.files.append(os.path.join(self.path, file))
@@ -284,10 +285,27 @@ class DataStruct(Helper):
                     for n in range(len(data[dat])):
                         data[dat][n] /= constans
 
-    def separation(self):
+    def separation(self, re_header="", im_header=""):
+        if re_header and im_header:
+            R_header = re_header
+            I_header = im_header
+        elif self.header:
+            R_header = self.header[0]
+            I_header = self.header[1]
+        else:
+            R_header = input("Set arbitrary real-part header:")
+            I_header = input("Set arbitrary imag-part header:")
+        self.real_part['name'] = R_header
+        self.imag_part['name'] = I_header
         for dat in self.data:
-            self.real_part["values"].append(tuple(dat[self.real_part["name"]]))
-            self.imag_part["values"].append(tuple(dat[self.imag_part["name"]]))
+            self.real_part["values"].append(tuple(dat[R_header]))
+            self.imag_part["values"].append(tuple(dat[I_header]))
+
+    def read_routine(self):
+        self.__init__(self.path)
+        self.get_files()
+        self.load_data()
+        self.separation()
 
 
 # MODULE FUNCTIONS
@@ -496,7 +514,7 @@ def listing(path="."):
     return this_dir
 
 
-def csv_convert(path=".", file_name=""):
+def csv_convert(path=".", file_name="", new_path="."):
     """
     `DataStruct` module method
     ---
@@ -521,12 +539,17 @@ def csv_convert(path=".", file_name=""):
     + 1 - if `FileNotFoundError` error occurres while trying to
     find and open both input and output files
     + 2 - if data from input file is not covertable to CSV format
+    + -1 - if one or both paths are not str-convertible
     """
+    path = str(path)
+    new_path = str(new_path)
     if path[-1] != '/':
         path += '/'
+    if new_path[-1] != '/':
+        new_path += '/'
     try:
         old_file = open(path+file_name, 'r')
-        new_csv = open(path+file_name.split('.')[0]+'.csv', 'w')
+        new_csv = open(new_path+file_name.split('.')[0]+'.csv', 'w')
     except FileNotFoundError:
         return 1
     while True:
@@ -574,7 +597,7 @@ def csv_manual(path="."):
     for f in file_list:
         print(f"{pos}: {f}")
         pos += 1
-    print("q: Exit programme")
+    print("q: Exit program")
     ans = 0
     while ans != 'q':
         ans = input("Option: ")

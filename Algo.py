@@ -14,7 +14,7 @@ import DataStruct as ds             # to use some of functions
 import math
 import time                         # estimating elapsed time
 
-N_peaks = 20
+N_peaks = 10
 
 
 def lorentz(A, B, x_arg, x0=0.0):
