@@ -285,20 +285,18 @@ class DataStruct(Helper):
                     for n in range(len(data[dat])):
                         data[dat][n] /= constans
 
-    def separation(self):
-        pass
-        # if
-        # for dat in self.data:
-        #     self.real_part["values"].append(tuple(dat[R_header]))
-        #     self.imag_part["values"].append(tuple(dat[I_header]))
-        # self.real_part['name'] = R_header
-        # self.imag_part['name'] = I_header
+    def separation(self, R_header, I_header):
+        for dat in self.data:
+            self.real_part["values"].append(tuple(dat[R_header]))
+            self.imag_part["values"].append(tuple(dat[I_header]))
+        self.real_part['name'] = R_header
+        self.imag_part['name'] = I_header
 
     def read_routine(self):
         self.__init__(self.path)
         self.get_files()
         self.load_data()
-        self.separation()
+        self.separation(self.header[0], self.header[1])
 
 
 # MODULE FUNCTIONS
