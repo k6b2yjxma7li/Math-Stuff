@@ -3,3 +3,5 @@ notatka
 *.csv
 .data
 *.png
+*.svg
+*.jp*g

@@ -6,7 +6,7 @@ Description:
 ---
 This module have been created to collect all methods, that were needed to
 manage and modify data, especially spectral. It contains some statistical
-methods but also analitical ones.
+methods but also analytical ones.
 
 To effectively manage data files there are listing and converting functions.
 Most of them created to be quite easy to use and error proof, although
@@ -144,7 +144,7 @@ class Helper:
 
         Mods:
         ---
-        This function conatains two modes for calculating an estimator:
+        This function contains two modes for calculating an estimator:
         arithmetic or geometric. First one is a default, second can be raised
         by modifying `estimator` string argument by passing `geometric` to it.
         """
@@ -311,7 +311,7 @@ def deriv(x_arg, y_arg, func=Helper.gravity_mean):
     ---
     +   `x_arg` Real part of data [iterable]
     +   `y_arg` Imag part of data [iterable]
-    Both parameters must be of the same lenght; if not `IndexError`
+    Both parameters must be of the same length; if not `IndexError`
     is raised.
 
     Returns:
@@ -358,7 +358,7 @@ def integral(x_arg, y_arg, func=Helper.geom_mean):
     ---
     +   `x_arg` Real part of data [iterable]
     +   `y_arg` Imag part of data [iterable]
-    Both parameters must be of the same lenght; if not `IndexError`
+    Both parameters must be of the same length; if not `IndexError`
     is raised.
 
     Returns:
@@ -470,7 +470,7 @@ def listing(path="."):
 
     Raises:
     ---
-    + TypeError: Argument `path` is not a vild str.
+    + TypeError: Argument `path` is not a valid str.
     + Exception: Path `{path}` is not an existing directory.
     """
     if type(path) != str:
@@ -630,7 +630,7 @@ def angular(x_arg, y_arg):
 
     Description:
     ---
-    Angle coeff of two-way derivative
+    Angle coefficient of two-way derivative
 
     Parameters:
     ---
