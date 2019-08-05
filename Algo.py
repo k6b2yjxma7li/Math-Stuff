@@ -54,7 +54,6 @@ def lorentz(A, B, x_arg, x0=0.0):
     Lorentz's function generator. Uses three paramters `A`, `B`, `x0` to
     return value of Lorentz's function at point specified in `x_arg`.
     """
-    # logging.debug(f"lorentz({type(A)}, {type(B)}, {type(x_arg)}, {type(x0)})")
     return A/((2*(x_arg-x0)/B)**2.0 + 1.0)
 
 
@@ -71,6 +70,9 @@ def array_it(function):
     ---
     + `function` -- non-iterating function object
 
+    Warning:
+    ---
+    Listing argument has to be named!
     """
     logging.debug(f"array_it({type(function)}: {function.__name__})")
 
@@ -78,12 +80,16 @@ def array_it(function):
         P.update(Q)
         return P
 
-    def list_fun(**kwargs):
-        for key, arg in kwargs.items():
-            if ('__len__' in dir(arg)) and (type(arg) is not str):
-                x_list = kwargs.pop(key)
-                break
-        return [function(**(release(kwargs.copy(), {key: x}))) for x in x_list]
+    def list_fun(*args, **kwargs):
+        args = list(args)
+        varnames = function.__code__.co_varnames
+        for n in range(len(args)):
+            if ('__len__' in dir(args[n])) and (type(args[n]) is not str):
+                key_lt = varnames[n]
+                x_list = args[n]
+            else:
+                kwargs = release(kwargs, {varnames[n]: args[n]})
+        return [function(**(release(kwargs, {key_lt: x}))) for x in x_list]
     return list_fun
 
 
@@ -113,7 +119,8 @@ def peak_find(y_arg):
     minimum = ds.Helper.gravity_mean(data_c)    # min to use as background
     amp = max(data)-minimum               # amplitude
     main_point = ds.nearest(data, max(data))    # finding peak point arg
-    return (lambda b, x, x0: lorentz_arr(A=amp, B=b, x_arg=x, x0=x0), main_point, amp)
+    return (lambda b, x, x0: lorentz_arr(amp, b, x, x0),
+            main_point, amp)
 
 
 """
@@ -149,7 +156,7 @@ def observe(y_arg, x_arg):
         peaks = peak_find(y_arg)                      # peak finding
         b_val = 0
         for m in range(1, 10000, 10):               # course-search for-loop
-            s = peaks[0](b=m, x=x_arg, x0=x_arg[peaks[1]])     # lorentz thrown here
+            s = peaks[0](m, x_arg, x_arg[peaks[1]])     # lorentz_arr
             ch_val = ds.pearson(y_arg, s)           # Pearson's R value check
             if ch_val > b_val:
                 b_val = ch_val
@@ -166,12 +173,12 @@ def observe(y_arg, x_arg):
                 fine_val = b_val+EY[m]
                 break
         data_set.append([peaks[2], fine_val, x_arg[peaks[1]]])  # main dataset
-        lor = lorentz_arr(A=peaks[2], B=fine_val, x_arg=x_arg, x0=x_arg[peaks[1]])
+        lor = lorentz_arr(peaks[2], fine_val, x_arg, x_arg[peaks[1]])
         # y_arg change to eliminate found peaks
         y_arg = [y_arg[n]-lor[n] for n in range(len(y_arg))]
-        print(time.process_time()-start)
+        logging.info(f"observe: step {akn}: {time.process_time()-start}\ts")
         sum_time += time.process_time()-start
-    print(f"Time consumption: {sum_time}")
+    logging.info(f"Time consumption: {sum_time}.")
     return data_set
 
 
@@ -213,6 +220,7 @@ def main():
     plt.plot(wave[0], [inte[0][n]-lor[n] for n in range(w_len)], linewidth=0.5)
     plt.legend(["Data points", "Fit", "Error"])
     print(f"Time consumption: {time.process_time()-start}")
+    logging.info(f"Time consumption: {time.process_time()-start}")
     plt.show()
 
 
@@ -225,3 +233,7 @@ def set_globals(numb_peaks=1):
     global N_PEAKS
     N_PEAKS = numb_peaks
     return f"Number of peaks: {N_PEAKS}\n"
+
+
+# if __name__ == "__main__":
+#     main()
