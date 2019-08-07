@@ -4,7 +4,7 @@ Marching sphere
 
 Description:
 ---
-This algorithm is simple approach to using idea of Laplace's mechanics to
+This algorithm is simple approach to using idea of Lagrange mechanics to
 deduce extrema of a given function. The file consists of several functions
 to perform necessary calculations.
 """

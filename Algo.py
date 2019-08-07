@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from __Main import wave             # wave data for specified exps
 from __Main import inte             # intensity data
 import DataStruct as ds             # to use some of functions
+import Marching_sphere.marching_sphere as marching_sphere
 import math
 import time                         # estimating elapsed time
 import logging                      # for logging
