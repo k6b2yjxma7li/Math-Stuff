@@ -1,6 +1,7 @@
 """
-DataStruct Module
----
+DataStruct
+===
+Author: k6b2yjxma7li
 
 Description:
 ---

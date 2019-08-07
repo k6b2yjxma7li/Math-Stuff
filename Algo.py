@@ -1,5 +1,11 @@
 """
-This is main algorithm for finding fit of series of Lorentz's curves
+Algo
+===
+Author: k6b2yjxma7li
+
+Description:
+---
+This is main algorithm file for finding fit of series of Lorentz's curves
 to a given spectral data, especially Raman.
 
 Following script had been written by rules of pylama code audit (W291)
@@ -7,14 +13,14 @@ Python 3.6.8 (64-bit) and with Visual Studio Code, therefore it gives no
 errors nor warnings with this setup.
 """
 
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt     # plots!
 from __Main import wave             # wave data for specified exps
 from __Main import inte             # intensity data
 import DataStruct as ds             # to use some of functions
-import Marching_sphere.marching_sphere as marching_sphere
+from Marching_sphere import marching_sphere, sphere_generator  # fitting!
 import math
 import time                         # estimating elapsed time
-import logging                      # for logging
+import logging                      # logging!
 
 N_PEAKS = 10
 
@@ -48,8 +54,9 @@ while True:
 
 def lorentz(A, B, x_arg, x0=0.0):
     """
-    `Algo` method
+    `Algo` function: `lorentz`
     ---
+
     Description:
     ---
     Lorentz's function generator. Uses three paramters `A`, `B`, `x0` to
@@ -60,8 +67,9 @@ def lorentz(A, B, x_arg, x0=0.0):
 
 def array_it(function):
     """
-    `array_it` function
+    `Algo` function: `array_it`
     ---
+
     Description:
     ---
     Creating element-wise function object, which then might be used on
@@ -97,10 +105,19 @@ def array_it(function):
 lorentz_arr = array_it(lorentz)  # creating arrayed function of lorentz
 
 
+def error_function(*args):
+    pass
+
+
+# special attribute for functions with hard to detect length arguments
+error_function.argcount = N_PEAKS*3
+
+
 def peak_find(y_arg):
     """
-    `Algo` method
+    `Algo` function: `peak_find`
     ---
+
     Description:
     ---
     Finds peak's parameters basing on `y_arg` argument containing spectral
@@ -141,8 +158,9 @@ functions to estimate given spectrum.
 
 def observe(y_arg, x_arg):
     """
-    `Algo` method
+    `Algo` function: `observe`
     ---
+
     Description:
     ---
     Swipes through data, finds peaks by using `peak_find` method, and matches
@@ -179,7 +197,7 @@ def observe(y_arg, x_arg):
         y_arg = [y_arg[n]-lor[n] for n in range(len(y_arg))]
         logging.info(f"observe: step {akn}: {time.process_time()-start}\ts")
         sum_time += time.process_time()-start
-    logging.info(f"Time consumption: {sum_time}.")
+    logging.info(f"observe: Time consumption: {sum_time}.")
     return data_set
 
 
@@ -187,6 +205,7 @@ def main():
     """
     `Algo` main method
     ---
+
     Description:
     ---
     Uses `Algo.observe` method to fit Lorentz's curves to data, then
@@ -212,7 +231,7 @@ def main():
                               l1[l][2])
         stop = time.process_time()
         sum_time += stop-step
-        logging.info(f"Approximation ETA:"
+        logging.info("main: Approximation ETA:"
                      f" {stop-main_time - len(l1)*sum_time/(l+1)}")
 
     # final results presentation
@@ -220,14 +239,15 @@ def main():
     plt.plot(wave[0], lor, linewidth=0.5)
     plt.plot(wave[0], [inte[0][n]-lor[n] for n in range(w_len)], linewidth=0.5)
     plt.legend(["Data points", "Fit", "Error"])
-    print(f"Time consumption: {time.process_time()-start}")
-    logging.info(f"Time consumption: {time.process_time()-start}")
+    print(f"main: Time consumption: {time.process_time()-start}")
+    logging.info(f"main: Time consumption: {time.process_time()-start}")
     plt.show()
 
 
 def set_globals(numb_peaks=1):
     """
-    `Algo` method
+    `Algo` special function: `set_globals`
+    ---
     """
     # for key, value in kwargs.items():
     #     global
