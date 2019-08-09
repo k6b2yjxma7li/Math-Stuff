@@ -52,7 +52,7 @@ while True:
 # ALGORITHM BLOCK
 
 
-def lorentz(A, B, x_arg, x0=0.0):
+def lorentz(A, B, x0, x_arg):
     """
     `Algo` function: `lorentz`
     ---
@@ -137,7 +137,7 @@ def peak_find(y_arg):
     minimum = ds.Helper.gravity_mean(data_c)    # min to use as background
     amp = max(data)-minimum               # amplitude
     main_point = ds.nearest(data, max(data))    # finding peak point arg
-    return (lambda b, x, x0: lorentz_arr(amp, b, x, x0),
+    return (lambda b, x, x0: lorentz_arr(amp, b, x0, x),
             main_point, amp)
 
 
@@ -192,7 +192,9 @@ def observe(y_arg, x_arg):
                 fine_val = b_val+EY[m]
                 break
         data_set.append([peaks[2], fine_val, x_arg[peaks[1]]])  # main dataset
+        # data_set.append(out[0])  # main dataset
         lor = lorentz_arr(peaks[2], fine_val, x_arg, x_arg[peaks[1]])
+        # lor = lorentz_arr(out[0][0], out[0][1], x_arg, out[0][2])
         # y_arg change to eliminate found peaks
         y_arg = [y_arg[n]-lor[n] for n in range(len(y_arg))]
         logging.info(f"observe: step {akn}: {time.process_time()-start}\ts")
@@ -213,9 +215,10 @@ def main():
     calculates time needed to complete the task. Finally it presents
     results in form of a graph with three lines:
     """
+    waveform_nr = 0
     start = time.process_time()
-    l1 = observe(inte[0], wave[0])                  # main algorithm call
-    w_len = len(wave[0])
+    l1 = observe(inte[waveform_nr], wave[waveform_nr])    # main algorithm call
+    w_len = len(wave[waveform_nr])
     lor = [0 for n in range(w_len)]                # init of estimation dataset
 
     # this gonna take some time, but also it will count it!
@@ -225,10 +228,7 @@ def main():
     for l in range(len(l1)):             # for-loop to sum all Lorentz's
         step = time.process_time()
         for n in range(w_len):
-            lor[n] += lorentz(l1[l][0],
-                              l1[l][1],
-                              wave[0][n],
-                              l1[l][2])
+            lor[n] += lorentz(*l1[l], wave[0][n])
         stop = time.process_time()
         sum_time += stop-step
         logging.info("main: Approximation ETA:"
@@ -256,5 +256,5 @@ def set_globals(numb_peaks=1):
     return f"Number of peaks: {N_PEAKS}\n"
 
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()

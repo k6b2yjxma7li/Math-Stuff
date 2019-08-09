@@ -65,8 +65,8 @@ def sphere_generator(dim, height, offset):
     + `ValueError`: Offsetting point has incomapatible length -- if `offset`
     length is not equal to `dim` value.
     """
-    logging.debug("sphere_generator"
-                  f"{tuple([type(v) for k, v in locals().items()])}")
+    # logging.debug("sphere_generator"
+    #               f"{tuple([type(v) for k, v in locals().items()])}")
     if '__len__' not in dir(offset):
         msg = ("sphere_generator: Offsetting point is not compatible with"
                " matrix.")
@@ -78,13 +78,20 @@ def sphere_generator(dim, height, offset):
         logging.error(msg)
         raise ValueError(msg)
     result = []
+    if '__len__' not in dir(height):
+        height = dim*[height]
+    elif len(height) != dim:
+        msg = ("sphere_generator: Height data have incompatible length: "
+               f"dim: {dim} != len(offset): {len(offset)}.")
+        logging.error(msg)
+        raise ValueError(msg)
     for n in range(dim):
         result_plus = []
         result_minus = []
         for k in range(dim):
             if n == k:
-                result_minus.append(-height+offset[n])
-                result_plus.append(height+offset[n])
+                result_minus.append(-height[n]+offset[n])
+                result_plus.append(height[n]+offset[n])
             else:
                 result_minus.append(offset[n])
                 result_plus.append(offset[n])
@@ -121,13 +128,20 @@ def marching_sphere(function, start, steps=1e+4, dstnc=1.0, rate=0.5,
     ---
     + AttributeError: Argument detection failed in function -- if passed
     function has `*args` as one of arguments or does not own special attribute
-    `argcount`
+    `argcount`.
     + ValueError: Argument `steps` of type `{type(steps)}` is not a valid
-    numerical value -- if `steps` cannot be converted to `int`
+    numerical value -- if `steps` cannot be converted to `int`.
+    + TypeError: Start {start} and distance {dstnc} are not compatible.
     """
     logging.debug("marching_sphere"
                   f"{tuple([type(v) for k, v in locals().items()])}")
-
+    if '__len__' not in dir(dstnc):
+        dstnc = len(start)*[dstnc]
+    elif len(dstnc) != len(start):
+        msg = (f"marching_sphere: Start {start} and distance {dstnc}"
+               " are not compatible.")
+        logging.error(msg)
+        raise TypeError(msg)
     rad = dstnc
     varnames = function.__code__.co_varnames
     if 'args' not in varnames:
@@ -150,10 +164,10 @@ def marching_sphere(function, start, steps=1e+4, dstnc=1.0, rate=0.5,
         raise ValueError(msg)
     for n in range(steps):
         sphere = sphere_generator(dim, rad, last)
-        rad *= rate
+        rad = list(map(lambda x: x*rate, rad))
         if n % 10 == 0:
             rad = dstnc
-            dstnc *= rate
+            dstnc = list(map(lambda x: x*rate, dstnc))
         point = [function(*[sphere[l][k] for l in range(dim)])
                  for k in range(2*dim)]
         if type(point[0]) not in [float, int]:
