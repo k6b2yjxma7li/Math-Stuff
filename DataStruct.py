@@ -635,18 +635,25 @@ def angular(x_arg, y_arg):
 
     Parameters:
     ---
-    + `path` - specifies path to search for file to be converted
+    + `x_arg`: iter(float)
+    + `y_arg`: iter(float)
     Raises:
     ---
-    None
+    + TypeError: Arguments are not valid iterators: x_arg ({type(x_arg)}),
+    y_arg({type(y_arg)}). -- if one or more arguments are not iterators
+    + IndexError: Arguments are not of equal length ({len(x_arg)} and
+    {len(y_arg)}). -- if length of arguments does not match
 
     Returns:
     ---
-    None
-
-    If there is an error occuring it must be traced back to
-    `DataStruct.listing` or `DataStruct.csv_convert` methods.
+    `ang`: list(float)
     """
+    if '__len__' not in dir(x_arg)+dir(y_arg):
+        raise TypeError("Arguments are not valid iterators: "
+                        f"x_arg ({type(x_arg)}), y_arg({type(y_arg)}).")
+    elif len(x_arg) != len(y_arg):
+        raise IndexError("Arguments are not of equal length "
+                         f"({len(x_arg)} and {len(y_arg)}).")
     import math
     n_inte = y_arg
     y_arg.reverse()
@@ -661,3 +668,57 @@ def angular(x_arg, y_arg):
 
     ang = [abs(a2[n] + a1[n])/math.tau for n in range(len(d1))]
     return ang
+
+
+"""
+Linear fit:
+a = mean(dy/dx)
+b = mean(y) - a*mean(x)
+
+Improved fit:
++ fitting by method from above
++ set of distances point to line
++ each distance describes argument of waging function
+"""
+
+
+def linear_fit(x_arg, y_arg, err=False):
+    """
+    `DataStruct` module method
+    ---
+
+    Description:
+    ---
+    Angle coefficient of two-way derivative
+
+    Parameters:
+    ---
+    + `x_arg`: iter(float)
+    + `y_arg`: iter(float)
+    Arguments specify data set to which linear fit is to be performed.
+    Raises:
+    ---
+    None
+
+    Returns:
+    ---
+    (`a`, `b`): (float, float)
+    """
+    dx = [x_arg[n]-x_arg[n-1] for n in range(1, len(x_arg))]
+    dy = [y_arg[n]-y_arg[n-1] for n in range(1, len(y_arg))]
+    df = [dy[n]/dx[n] for n in range(len(dx))]
+    a = Helper.arith_mean(df)
+    b = (sum(y_arg) - a*sum(x_arg))/len(y_arg)
+    if err:
+        import matplotlib.pyplot as plt
+        t = [n/len(dx)+(3/2)*min(x_arg) for n in range(len(dx))]
+        plt.plot(t, dx, '.')
+        plt.plot(t, dy, '.')
+        plt.plot(t, df, '.')
+        ux = Helper.sigma(dx)
+        uy = Helper.sigma(dy)
+        ua = Helper.sigma(df)
+        ub = (uy**2 + (Helper.arith_mean(x_arg)*ua)**2 + (a*ux)**2)**0.5
+        return (a, b, ua, ub)
+    else:
+        return (a, b)

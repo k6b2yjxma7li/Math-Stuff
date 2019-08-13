@@ -61,8 +61,40 @@ def lorentz(A, B, x0, x_arg):
     ---
     Lorentz's function generator. Uses three paramters `A`, `B`, `x0` to
     return value of Lorentz's function at point specified in `x_arg`.
+
+    Value of `B` represents half-maximum peak width of Lorentz curve.
+
+    Parameters:
+    ---
+    + `A` -- peak's amplitude
+    + `B` -- half-maximum peak width
+    + `x0` -- argument of maximum point
+    + `x_arg` -- curve's argument
     """
     return A/((2*(x_arg-x0)/B)**2.0 + 1.0)
+
+
+def lorentz2(A, b, x0, x_arg):
+    """
+    `Algo` function: `lorentz`
+    ---
+
+    Description:
+    ---
+    Lorentz's function generator. Uses three paramters `A`, `b`, `x0` to
+    return value of Lorentz's function at point specified in `x_arg`.
+
+    Value of `b` represents coefficient of curve's width as in quadratic
+    function.
+
+    Parameters:
+    ---
+    + `A` -- peak's amplitude
+    + `b` -- width coefficient
+    + `x0` -- argument of maximum point
+    + `x_arg` -- curve's argument
+    """
+    return A/(1+b*(x_arg-x0)**2)
 
 
 def array_it(function):
@@ -78,10 +110,6 @@ def array_it(function):
     Parameters:
     ---
     + `function` -- non-iterating function object
-
-    Warning:
-    ---
-    Listing argument has to be named!
     """
     logging.debug(f"array_it({type(function)}: {function.__name__})")
 
@@ -166,6 +194,11 @@ def observe(y_arg, x_arg):
     Swipes through data, finds peaks by using `peak_find` method, and matches
     certain parameters of each Lorentz to finally return n-row 3-element list
     of parameters in the following order: [amplitude, half-amp width, peak arg]
+
+    Returns:
+    ---
+    + `data_set`: list(list(float, float, float)) -- list of vectors:
+    [`amplitude`, `half-amp width`, `peak arg`]
     """
     logging.debug(f"observe({type(y_arg)}, {type(x_arg)})")
     sum_time = 0.0
@@ -213,7 +246,7 @@ def main():
     Uses `Algo.observe` method to fit Lorentz's curves to data, then
     generates fit points from return of `observe`. For all steps it
     calculates time needed to complete the task. Finally it presents
-    results in form of a graph with three lines:
+    results in form of a plot with three lines:
     """
     waveform_nr = 0
     start = time.process_time()
