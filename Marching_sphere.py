@@ -186,42 +186,49 @@ def marching_sphere(function, start, steps=1e+4, dstnc=1.0, rate=0.5,
     the_progress = 0
     final_countdown = 0
     for n in range(steps):
-        # set of points that are located on axes of multidimensional space
-        sphere = sphere_generator(dim, rad, last)
-        # this was first attempt at regulating accuracy; now obsolete
-        rad = list(map(lambda x: x*rate, rad))
-        # accuracy change step
-        if progress < 1:
-            rate = rate**rate
-            rad = dstnc
-            dstnc = list(map(lambda x: x*rate, dstnc))
-        if progress == 0:
-            final_countdown += 1
-        else:
-            final_countdown = 0
-        if final_countdown > 7:
-            msg = "marching_sphere: Premature loop break due to no progress."
-            logging.warn(msg)
+        try:
+            # set of points that are located on axes of multidimensional space
+            sphere = sphere_generator(dim, rad, last)
+            # this was first attempt at regulating accuracy; now obsolete
+            rad = list(map(lambda x: x*rate, rad))
+            # accuracy change step
+            if progress < 1:
+                rate = rate**rate
+                rad = dstnc
+                dstnc = list(map(lambda x: x*rate, dstnc))
+            if progress == 0:
+                final_countdown += 1
+            else:
+                final_countdown = 0
+            if final_countdown > 7:
+                msg = ("marching_sphere: Premature loop break due"
+                       " to no progress.")
+                logging.warn(msg)
+                print(msg)
+                break
+            # list of points from which one is selected
+            point = [function(*[sphere[l][k] for l in range(dim)])
+                     for k in range(2*dim)]
+            # error of wrong input function result
+            if type(point[0]) not in [float, int]:
+                msg = (f"marching_sphere: Function `{function.__name__}` does"
+                       " not return single numerical value as output.")
+                logging.error(msg)
+                raise TypeError(msg)
+            # id of selected point of a sphere
+            selected_index = point.index(selector(point))
+            # actual selected point (basing on id)
+            last = [sphere[l][selected_index] for l in range(dim)]
+            progress = (1-function(*last)/function(*[d[-1] for d in data]))*100
+            the_progress = (1-function(*last)/function(*start))*100
+            print(f"{n}\t{progress}%\t{the_progress}%")
+            # saving all points to recreate changes, not necessary
+            data = [data[m]+(last[m],) for m in range(len(last))]
+        except KeyboardInterrupt:
+            msg = "marching_sphere: User interruption."
+            logging.info(msg)
             print(msg)
             break
-        # list of points from which one is selected
-        point = [function(*[sphere[l][k] for l in range(dim)])
-                 for k in range(2*dim)]
-        # error of wrong input function result
-        if type(point[0]) not in [float, int]:
-            msg = (f"marching_sphere: Function `{function.__name__}` does not"
-                   " return single numerical value as output.")
-            logging.error(msg)
-            raise TypeError(msg)
-        # id of selected point of a sphere
-        selected_index = point.index(selector(point))
-        # actual selected point (basing on id)
-        last = [sphere[l][selected_index] for l in range(dim)]
-        progress = (1-function(*last)/function(*[d[-1] for d in data]))*100
-        the_progress = (1-function(*last)/function(*start))*100
-        print(f"{n}\t{progress}%\t{the_progress}%")
-        # saving all points to recreate changes, not necessary
-        data = [data[m]+(last[m],) for m in range(len(last))]
     return (last, point[selected_index], data)
 
 
