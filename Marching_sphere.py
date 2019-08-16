@@ -7,7 +7,7 @@ Description:
 ---
 This algorithm is simple approach to using idea of Lagrange mechanics to
 deduce extrema of a given function. The file consists of several functions
-to perform necessary calculations.
+to perform necessary calculations. Caution: it takes a lot of time.
 """
 import logging
 
@@ -67,6 +67,7 @@ def sphere_generator(dim, height, offset):
     """
     # logging.debug("sphere_generator"
     #               f"{tuple([type(v) for k, v in locals().items()])}")
+    # logging
     if '__len__' not in dir(offset):
         msg = ("sphere_generator: Offsetting point is not compatible with"
                " matrix.")
@@ -77,7 +78,11 @@ def sphere_generator(dim, height, offset):
                f"dim: {dim} != len(offset): {len(offset)}.")
         logging.error(msg)
         raise ValueError(msg)
+    # defining return of this function
     result = []
+    # height might be defined as a single value
+    # OR
+    # as a set of values, but this way it must correspond to the dimension
     if '__len__' not in dir(height):
         height = dim*[height]
     elif len(height) != dim:
@@ -85,16 +90,25 @@ def sphere_generator(dim, height, offset):
                f"dim: {dim} != len(offset): {len(offset)}.")
         logging.error(msg)
         raise ValueError(msg)
+    # defining actual sphere
     for n in range(dim):
+        # sphere as a matrix contains two parts:
         result_plus = []
         result_minus = []
+        # because the structure presents as follows:
+        # [[1, 0, 0, ..., -1,  0,  0, ...],
+        #  [0, 1, 0, ...,  0, -1,  0, ...],
+        #  [0, 0, 1, ...,  0,  0, -1, ...],
+        #               ...                ]
         for k in range(dim):
+            # adding elements with offset point
             if n == k:
                 result_minus.append(-height[n]+offset[n])
                 result_plus.append(height[n]+offset[n])
             else:
                 result_minus.append(offset[n])
                 result_plus.append(offset[n])
+        # final merging of results
         result.append(result_plus+result_minus)
     return result
 
@@ -144,17 +158,23 @@ def marching_sphere(function, start, steps=1e+4, dstnc=1.0, rate=0.5,
         raise TypeError(msg)
     rad = dstnc
     varnames = function.__code__.co_varnames
-    if 'args' not in varnames:
-        dim = len(varnames)
-    else:
-        try:
-            dim = function.argcount
-        except AttributeError:
+    # function has to have:
+    # special attribute `argcount`
+    # OR
+    # literal arguments (not *args/**kwargs)
+    # one of those two specifies number of regulated parameters
+    try:
+        dim = function.argcount
+    except AttributeError:
+        if 'args' not in varnames:
+            dim = len(varnames)
+        else:
             msg = ("marching_sphere: Argument detection failed in"
                    f" function `{function.__name__}`.")
             logging.error(msg)
+    # argument switch to apply recursion; output becomes input
     last = start
-    data = [() for m in range(dim)]
+    data = [(start[m],) for m in range(dim)]
     try:
         steps = int(steps)
     except ValueError:
@@ -162,21 +182,45 @@ def marching_sphere(function, start, steps=1e+4, dstnc=1.0, rate=0.5,
                " is not a valid numerical value.")
         logging.error(msg)
         raise ValueError(msg)
+    progress = 100
+    the_progress = 0
+    final_countdown = 0
     for n in range(steps):
+        # set of points that are located on axes of multidimensional space
         sphere = sphere_generator(dim, rad, last)
+        # this was first attempt at regulating accuracy; now obsolete
         rad = list(map(lambda x: x*rate, rad))
-        if n % 10 == 0:
+        # accuracy change step
+        if progress < 1:
+            rate = rate**rate
             rad = dstnc
             dstnc = list(map(lambda x: x*rate, dstnc))
+        if progress == 0:
+            final_countdown += 1
+        else:
+            final_countdown = 0
+        if final_countdown > 7:
+            msg = "marching_sphere: Premature loop break due to no progress."
+            logging.warn(msg)
+            print(msg)
+            break
+        # list of points from which one is selected
         point = [function(*[sphere[l][k] for l in range(dim)])
                  for k in range(2*dim)]
+        # error of wrong input function result
         if type(point[0]) not in [float, int]:
             msg = (f"marching_sphere: Function `{function.__name__}` does not"
                    " return single numerical value as output.")
             logging.error(msg)
             raise TypeError(msg)
+        # id of selected point of a sphere
         selected_index = point.index(selector(point))
+        # actual selected point (basing on id)
         last = [sphere[l][selected_index] for l in range(dim)]
+        progress = (1-function(*last)/function(*[d[-1] for d in data]))*100
+        the_progress = (1-function(*last)/function(*start))*100
+        print(f"{n}\t{progress}%\t{the_progress}%")
+        # saving all points to recreate changes, not necessary
         data = [data[m]+(last[m],) for m in range(len(last))]
     return (last, point[selected_index], data)
 

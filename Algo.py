@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt     # plots!
 from __Main import wave             # wave data for specified exps
 from __Main import inte             # intensity data
 import DataStruct as ds             # to use some of functions
-from Marching_sphere import marching_sphere, sphere_generator  # fitting!
+from Marching_sphere import marching_sphere   # fitting!
 import math
 import time                         # estimating elapsed time
 import logging                      # logging!
@@ -71,7 +71,7 @@ def lorentz(A, B, x0, x_arg):
     + `x0` -- argument of maximum point
     + `x_arg` -- curve's argument
     """
-    return A/((2*(x_arg-x0)/B)**2.0 + 1.0)
+    return abs(A)/((2*(x_arg-x0)/B)**2.0 + 1.0)
 
 
 def lorentz2(A, b, x0, x_arg):
@@ -94,7 +94,29 @@ def lorentz2(A, b, x0, x_arg):
     + `x0` -- argument of maximum point
     + `x_arg` -- curve's argument
     """
-    return A/(1+b*(x_arg-x0)**2)
+    return abs(A)/(1+abs(b)*(x_arg-x0)**2)
+
+
+def lorentz3(A, C, x0, x_arg):
+    """
+    `Algo` function: `lorentz`
+    ---
+
+    Description:
+    ---
+    Lorentz's function generator. Uses three paramters `A`, `C`, `x0` to
+    return value of Lorentz's function at point specified in `x_arg`.
+
+    Value of `C` represents coefficient of curve's shape.
+
+    Parameters:
+    ---
+    + `A` -- peak's amplitude
+    + `C` -- shape coefficient
+    + `x0` -- argument of maximum point
+    + `x_arg` -- curve's argument
+    """
+    return abs(A)/(abs(C)+(x_arg-x0)**2)
 
 
 def array_it(function):
@@ -133,12 +155,18 @@ def array_it(function):
 lorentz_arr = array_it(lorentz)  # creating arrayed function of lorentz
 
 
-def error_function(*args):
-    pass
+def error_gen(some_fun, y_data, x_data, start):
+    x = x_data
+    y = y_data
 
-
-# special attribute for functions with hard to detect length arguments
-error_function.argcount = N_PEAKS*3
+    def sq_err(*args):
+        spectrum = [sum([some_fun(*args[3*m:3*m+3], x[n])
+                         for m in range(int(len(args)/3))])
+                    for n in range(len(x))]
+        return sum([(spectrum[n] - y[n])**2 for n in range(len(y))])
+    # special attribute for functions with hard to detect length arguments
+    sq_err.argcount = len(start)
+    return sq_err
 
 
 def peak_find(y_arg):
@@ -244,34 +272,65 @@ def main():
     Description:
     ---
     Uses `Algo.observe` method to fit Lorentz's curves to data, then
-    generates fit points from return of `observe`. For all steps it
+    generates fit points from return of `observe`. After that the function
+    improves fitting with `Marching_sphere.marching_sphere`. For all steps it
     calculates time needed to complete the task. Finally it presents
     results in form of a plot with three lines:
     """
     waveform_nr = 0
+    x_data = wave[waveform_nr]
+    y_data = inte[waveform_nr]
     start = time.process_time()
-    l1 = observe(inte[waveform_nr], wave[waveform_nr])    # main algorithm call
+    # Marching sphere block
+    # expected to take 0.5s/iteration
+    fit = observe(y_data, x_data)   # main algorithm call
+    fit = [[f[0], (2/f[1])**2, f[2]] for f in fit]
+    fit_tmp = []
+    [fit_tmp.extend(f) for f in fit]
+    fit = fit_tmp
+
+    scales = ()
+    for n in range(len(fit)):
+        if (n+2) % 3:
+            C = 5
+        else:
+            C = 1.2
+        scales += (C,)
+    step = [fit[n]*scales[n] for n in range(len(fit))]
+    err_fun = error_gen(lorentz2, y_data, x_data, fit)
+    new_fit = marching_sphere(function=err_fun,
+                              start=fit,
+                              steps=100,
+                              dstnc=step,
+                              rate=0.8,
+                              selector=min)
+    marching_stop = time.process_time()
+    msg = f"main: Marching time: {marching_stop-start}."
+    m_fit = [new_fit[0][3*m:3*(m+1)] for m in range(int(len(new_fit[0])/3))]
+    print(msg)
+    logging.info(msg)
     w_len = len(wave[waveform_nr])
-    lor = [0 for n in range(w_len)]                # init of estimation dataset
+    lor = [0 for n in range(w_len)]   # init of estimation dataset
 
     # this gonna take some time, but also it will count it!
     sum_time = 0.0
     main_time = time.process_time()
 
-    for l in range(len(l1)):             # for-loop to sum all Lorentz's
+    for f in range(len(m_fit)):      # for-loop to sum all Lorentz's
         step = time.process_time()
         for n in range(w_len):
-            lor[n] += lorentz(*l1[l], wave[0][n])
+            lor[n] += lorentz2(*m_fit[f], x_data[n])
         stop = time.process_time()
         sum_time += stop-step
         logging.info("main: Approximation ETA:"
-                     f" {stop-main_time - len(l1)*sum_time/(l+1)}")
+                     f" {stop-main_time - len(m_fit)*sum_time/(f+1)}")
 
     # final results presentation
     plt.plot(wave[0], inte[0], linewidth=0.5)
     plt.plot(wave[0], lor, linewidth=0.5)
-    plt.plot(wave[0], [inte[0][n]-lor[n] for n in range(w_len)], linewidth=0.5)
-    plt.legend(["Data points", "Fit", "Error"])
+    plt.plot(wave[0], [(abs(inte[0][n]-lor[n]))
+                       for n in range(w_len)], linewidth=0.5)
+    plt.legend(["Data points", "Fit", "Absolute error"])
     print(f"main: Time consumption: {time.process_time()-start}")
     logging.info(f"main: Time consumption: {time.process_time()-start}")
     plt.show()
