@@ -1,3 +1,19 @@
+"""
+DataStruct
+===
+Author: k6b2yjxma7li
+
+Description:
+---
+This module have been created to collect all methods, that were needed to
+manage and modify data, especially spectral. It contains some statistical
+methods but also analytical ones.
+
+To effectively manage data files there are listing and converting functions.
+Most of them created to be quite easy to use and error proof, although
+all of these can be broken. Try not to do it.
+"""
+
 import csv
 import os
 
@@ -10,21 +26,6 @@ communicate = (("Warning: last element of derivative iterable is an"
 
 
 # HELPER CLASS
-
-"""
-DataStruct Module
----
-
-Description:
----
-This module have been created to collect all methods, that were needed to
-manage and modify data, especially spectral. It contains some statistical
-methods but also analitical ones.
-
-To effectively manage data files there are listing and converting functions.
-Most of them created to be quite easy to use and error proof, although
-all of these can be broken. Try not to do it.
-"""
 
 
 class Helper:
@@ -144,7 +145,7 @@ class Helper:
 
         Mods:
         ---
-        This function conatains two modes for calculating an estimator:
+        This function contains two modes for calculating an estimator:
         arithmetic or geometric. First one is a default, second can be raised
         by modifying `estimator` string argument by passing `geometric` to it.
         """
@@ -234,6 +235,7 @@ class DataStruct(Helper):
         out of CSV files.
         """
         files = listing(self.path)['files']
+        self.files = []
         for file in files:
             if '.csv' in file:
                 self.files.append(os.path.join(self.path, file))
@@ -284,10 +286,18 @@ class DataStruct(Helper):
                     for n in range(len(data[dat])):
                         data[dat][n] /= constans
 
-    def separation(self):
+    def separation(self, R_header, I_header):
         for dat in self.data:
-            self.real_part["values"].append(tuple(dat[self.real_part["name"]]))
-            self.imag_part["values"].append(tuple(dat[self.imag_part["name"]]))
+            self.real_part["values"].append(tuple(dat[R_header]))
+            self.imag_part["values"].append(tuple(dat[I_header]))
+        self.real_part['name'] = R_header
+        self.imag_part['name'] = I_header
+
+    def read_routine(self):
+        self.__init__(self.path)
+        self.get_files()
+        self.load_data()
+        self.separation(self.header[0], self.header[1])
 
 
 # MODULE FUNCTIONS
@@ -302,7 +312,7 @@ def deriv(x_arg, y_arg, func=Helper.gravity_mean):
     ---
     +   `x_arg` Real part of data [iterable]
     +   `y_arg` Imag part of data [iterable]
-    Both parameters must be of the same lenght; if not `IndexError`
+    Both parameters must be of the same length; if not `IndexError`
     is raised.
 
     Returns:
@@ -349,7 +359,7 @@ def integral(x_arg, y_arg, func=Helper.geom_mean):
     ---
     +   `x_arg` Real part of data [iterable]
     +   `y_arg` Imag part of data [iterable]
-    Both parameters must be of the same lenght; if not `IndexError`
+    Both parameters must be of the same length; if not `IndexError`
     is raised.
 
     Returns:
@@ -444,6 +454,8 @@ def pearson(x_dat, y_dat):
     return covariance(x_dat, y_dat)/(sigma(x_dat)*sigma(y_dat))
 
 
+# MAINTAINANCE FUNCTIONS
+
 def listing(path="."):
     """
     `DataStruct` module method
@@ -459,7 +471,7 @@ def listing(path="."):
 
     Raises:
     ---
-    + TypeError: Argument `path` is not a vild str.
+    + TypeError: Argument `path` is not a valid str.
     + Exception: Path `{path}` is not an existing directory.
     """
     if type(path) != str:
@@ -496,7 +508,7 @@ def listing(path="."):
     return this_dir
 
 
-def csv_convert(path=".", file_name=""):
+def csv_convert(path=".", file_name="", new_path=".", header=""):
     """
     `DataStruct` module method
     ---
@@ -519,16 +531,22 @@ def csv_convert(path=".", file_name=""):
     ---
     + 0 - if successful
     + 1 - if `FileNotFoundError` error occurres while trying to
-    find and open both input and output files
+    find and open one of input or output files
     + 2 - if data from input file is not covertable to CSV format
+    + -1 - if one or both paths are not str-convertible
     """
+    path = str(path)
+    new_path = str(new_path)
     if path[-1] != '/':
         path += '/'
+    if new_path[-1] != '/':
+        new_path += '/'
     try:
         old_file = open(path+file_name, 'r')
-        new_csv = open(path+file_name.split('.')[0]+'.csv', 'w')
+        new_csv = open(new_path+file_name.split('.')[0]+'.csv', 'w')
     except FileNotFoundError:
         return 1
+    print(header, end="", file=new_csv)
     while True:
         try:
             line = next(old_file).split()
@@ -552,7 +570,7 @@ def csv_manual(path="."):
 
     Description:
     ---
-    Manual searching and converting files from table format to CSV.
+    Manual searching and converting files from ASCII table format to CSV.
 
     Parameters:
     ---
@@ -574,18 +592,22 @@ def csv_manual(path="."):
     for f in file_list:
         print(f"{pos}: {f}")
         pos += 1
-    print("q: Exit programme")
+    print("q: Exit program")
     ans = 0
     while ans != 'q':
         ans = input("Option: ")
         try:
             ans = int(ans)
-            print(file_list[ans-1])
-            csv_convert(path, file_list[ans-1])
+            if ans > len(file_list):
+                print(f"No such option: {ans}.")
+            else:
+                print(file_list[ans-1])
+                nu_path = input("Enter new directory: ")
+                if nu_path == "":
+                    nu_path = "."
+                csv_convert(path, file_list[ans-1], nu_path)
         except ValueError:
-            break
-        if ans > len(file_list):
-            print(f"No such option: {ans}.")
+            pass
     return None
 
 
@@ -609,22 +631,29 @@ def angular(x_arg, y_arg):
 
     Description:
     ---
-    Angle coeff of two-way derivative
+    Angle coefficient of two-way derivative
 
     Parameters:
     ---
-    + `path` - specifies path to search for file to be converted
+    + `x_arg`: iter(float)
+    + `y_arg`: iter(float)
     Raises:
     ---
-    None
+    + TypeError: Arguments are not valid iterators: x_arg ({type(x_arg)}),
+    y_arg({type(y_arg)}). -- if one or more arguments are not iterators
+    + IndexError: Arguments are not of equal length ({len(x_arg)} and
+    {len(y_arg)}). -- if length of arguments does not match
 
     Returns:
     ---
-    None
-
-    If there is an error occuring it must be traced back to
-    `DataStruct.listing` or `DataStruct.csv_convert` methods.
+    `ang`: list(float)
     """
+    if '__len__' not in dir(x_arg)+dir(y_arg):
+        raise TypeError("Arguments are not valid iterators: "
+                        f"x_arg ({type(x_arg)}), y_arg({type(y_arg)}).")
+    elif len(x_arg) != len(y_arg):
+        raise IndexError("Arguments are not of equal length "
+                         f"({len(x_arg)} and {len(y_arg)}).")
     import math
     n_inte = y_arg
     y_arg.reverse()
@@ -639,3 +668,57 @@ def angular(x_arg, y_arg):
 
     ang = [abs(a2[n] + a1[n])/math.tau for n in range(len(d1))]
     return ang
+
+
+"""
+Linear fit:
+a = mean(dy/dx)
+b = mean(y) - a*mean(x)
+
+Improved fit:
++ fitting by method from above
++ set of distances point to line
++ each distance describes argument of waging function
+"""
+
+
+def linear_fit(x_arg, y_arg, err=False):
+    """
+    `DataStruct` module method
+    ---
+
+    Description:
+    ---
+    Angle coefficient of two-way derivative
+
+    Parameters:
+    ---
+    + `x_arg`: iter(float)
+    + `y_arg`: iter(float)
+    Arguments specify data set to which linear fit is to be performed.
+    Raises:
+    ---
+    None
+
+    Returns:
+    ---
+    (`a`, `b`): (float, float)
+    """
+    dx = [x_arg[n]-x_arg[n-1] for n in range(1, len(x_arg))]
+    dy = [y_arg[n]-y_arg[n-1] for n in range(1, len(y_arg))]
+    df = [dy[n]/dx[n] for n in range(len(dx))]
+    a = Helper.arith_mean(df)
+    b = (sum(y_arg) - a*sum(x_arg))/len(y_arg)
+    if err:
+        import matplotlib.pyplot as plt
+        t = [n/len(dx)+(3/2)*min(x_arg) for n in range(len(dx))]
+        plt.plot(t, dx, '.')
+        plt.plot(t, dy, '.')
+        plt.plot(t, df, '.')
+        ux = Helper.sigma(dx)
+        uy = Helper.sigma(dy)
+        ua = Helper.sigma(df)
+        ub = (uy**2 + (Helper.arith_mean(x_arg)*ua)**2 + (a*ux)**2)**0.5
+        return (a, b, ua, ub)
+    else:
+        return (a, b)
