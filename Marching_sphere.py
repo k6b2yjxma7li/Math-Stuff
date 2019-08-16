@@ -227,7 +227,7 @@ def marching_sphere(function, start, steps=1e+4, dstnc=1.0, rate=0.5,
         except KeyboardInterrupt:
             msg = "marching_sphere: User interruption."
             logging.info(msg)
-            print(msg)
+            print("\n", msg)
             break
     return (last, point[selected_index], data)
 

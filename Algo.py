@@ -294,7 +294,7 @@ def main():
         if (n+2) % 3:
             C = 5
         else:
-            C = 1.2
+            C = 0.9
         scales += (C,)
     step = [fit[n]*scales[n] for n in range(len(fit))]
     err_fun = error_gen(lorentz2, y_data, x_data, fit)
