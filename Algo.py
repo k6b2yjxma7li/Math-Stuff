@@ -288,14 +288,7 @@ def main():
     fit_tmp = []
     [fit_tmp.extend(f) for f in fit]
     fit = fit_tmp
-
-    scales = ()
-    for n in range(len(fit)):
-        if (n+2) % 3:
-            C = 5
-        else:
-            C = 0.9
-        scales += (C,)
+    scales = int(len(fit)/3)*[0.7, 2.0, 4.0]
     step = [fit[n]*scales[n] for n in range(len(fit))]
     err_fun = error_gen(lorentz2, y_data, x_data, fit)
     new_fit = marching_sphere(function=err_fun,
@@ -315,7 +308,9 @@ def main():
     # this gonna take some time, but also it will count it!
     sum_time = 0.0
     main_time = time.process_time()
-
+    msg = "main: Fit spectrum generation."
+    logging.info(msg)
+    print(msg)
     for f in range(len(m_fit)):      # for-loop to sum all Lorentz's
         step = time.process_time()
         for n in range(w_len):

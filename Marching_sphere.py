@@ -10,6 +10,7 @@ deduce extrema of a given function. The file consists of several functions
 to perform necessary calculations. Caution: it takes a lot of time.
 """
 import logging
+import time
 
 # LOGGING BLOCK
 
@@ -149,6 +150,7 @@ def marching_sphere(function, start, steps=1e+4, dstnc=1.0, rate=0.5,
     """
     logging.debug("marching_sphere"
                   f"{tuple([type(v) for k, v in locals().items()])}")
+    beg = time.process_time()
     if '__len__' not in dir(dstnc):
         dstnc = len(start)*[dstnc]
     elif len(dstnc) != len(start):
@@ -229,6 +231,8 @@ def marching_sphere(function, start, steps=1e+4, dstnc=1.0, rate=0.5,
             logging.info(msg)
             print("\n", msg)
             break
+    logging.info("marching_sphere: Time consumption:"
+                 f" {time.process_time()-beg}")
     return (last, point[selected_index], data)
 
 
