@@ -109,6 +109,8 @@ def sphere_generator(dim, height, offset):
             else:
                 result_minus.append(offset[n])
                 result_plus.append(offset[n])
+        # zero point
+        result_plus.append(offset[n])
         # final merging of results
         result.append(result_plus+result_minus)
     return result
@@ -185,7 +187,7 @@ def marching_sphere(function, start, steps=1e+4, dstnc=1.0, rate=0.5,
         logging.error(msg)
         raise ValueError(msg)
     progress = 100
-    the_progress = 0
+    the_progress = [100]
     final_countdown = 0
     for n in range(steps):
         try:
@@ -222,8 +224,8 @@ def marching_sphere(function, start, steps=1e+4, dstnc=1.0, rate=0.5,
             # actual selected point (basing on id)
             last = [sphere[l][selected_index] for l in range(dim)]
             progress = (1-function(*last)/function(*[d[-1] for d in data]))*100
-            the_progress = (1-function(*last)/function(*start))*100
-            print(f"{n}\t{progress}%\t{the_progress}%")
+            the_progress.append((function(*last)/function(*start))*100)
+            print(f"{n}\t{progress}%\t{100-the_progress[-1]}%")
             # saving all points to recreate changes, not necessary
             data = [data[m]+(last[m],) for m in range(len(last))]
         except KeyboardInterrupt:
@@ -233,7 +235,7 @@ def marching_sphere(function, start, steps=1e+4, dstnc=1.0, rate=0.5,
             break
     logging.info("marching_sphere: Time consumption:"
                  f" {time.process_time()-beg}")
-    return (last, point[selected_index], data)
+    return (last, point[selected_index], data, the_progress)
 
 
 # Test functions

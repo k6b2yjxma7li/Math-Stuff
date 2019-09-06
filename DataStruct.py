@@ -252,14 +252,15 @@ class DataStruct(Helper):
         `DataStruct.headers`.
         """
         for n in range(len(self.files)):
-            csv_reader = csv.reader(open(self.files[n]))
-            self.header = next(csv_reader)
-            self.data.append({})
-            for k in range(len(self.header)):
-                self.data[n][self.header[k]] = []
-            for row in csv_reader:
+            with open(self.files[n]) as fl:
+                csv_reader = csv.reader(fl)
+                self.header = next(csv_reader)
+                self.data.append({})
                 for k in range(len(self.header)):
-                    self.data[n][self.header[k]].append(float(row[k]))
+                    self.data[n][self.header[k]] = []
+                for row in csv_reader:
+                    for k in range(len(self.header)):
+                        self.data[n][self.header[k]].append(float(row[k]))
 
     def normalize(self, function, value=1):
         """

@@ -2,6 +2,7 @@
 Algo
 ===
 Author: k6b2yjxma7li
+version: 200819
 
 Description:
 ---
@@ -127,7 +128,7 @@ def array_it(function):
     Description:
     ---
     Creating element-wise function object, which then might be used on
-    iterator argument. Argument specified in `arg_name`:str
+    iterator argument.
 
     Parameters:
     ---
@@ -141,7 +142,10 @@ def array_it(function):
 
     def list_fun(*args, **kwargs):
         args = list(args)
-        varnames = function.__code__.co_varnames
+        try:
+            varnames = function.__code__.co_varnames
+        except AttributeError:
+            raise AttributeError
         for n in range(len(args)):
             if ('__len__' in dir(args[n])) and (type(args[n]) is not str):
                 key_lt = varnames[n]
@@ -264,7 +268,8 @@ def observe(y_arg, x_arg):
     return data_set
 
 
-def main():
+def main(waveform_nr=0, scales=N_PEAKS*[1, 1, 1], function=lorentz2,
+         steps=100, rate=0.7, selector=min):
     """
     `Algo` main method
     ---
@@ -276,8 +281,28 @@ def main():
     improves fitting with `Marching_sphere.marching_sphere`. For all steps it
     calculates time needed to complete the task. Finally it presents
     results in form of a plot with three lines:
+        + blue -- actual data
+        + orange -- fit
+        + green -- absolute error
+
+    Parameters:
+    ---
+    + `waveform_nr`:int -- defines number of a waveform from __Main file
+    + `scales`:list(float) -- defines size of step ranges reffering to
+    `observe` fit values
+    + `function`:function_obj -- fitted peak function
+    + `steps`:int -- number of `marching_sphere` steps
+    + `rate`:float -- scaling value of `marching_sphere`
+    + `selector`:function_obj -- `marching_sphere` selecting function
+    For further explanation of least three parameters see docstring of
+    `Marching_sphere.marching_sphere`.
+
+    Warning!
+    ---
+    This version does not support actual changes in peak function at the
+    moment. Following updates will introduce fully custom fit functions.
+    Work is in progress.
     """
-    waveform_nr = 0
     x_data = wave[waveform_nr]
     y_data = inte[waveform_nr]
     start = time.process_time()
@@ -288,18 +313,18 @@ def main():
     fit_tmp = []
     [fit_tmp.extend(f) for f in fit]
     fit = fit_tmp
-    scales = int(len(fit)/3)*[0.7, 2.0, 4.0]
+    # scales = N_PEAKS*[0.9, 5.0, 2.0]
     step = [fit[n]*scales[n] for n in range(len(fit))]
-    err_fun = error_gen(lorentz2, y_data, x_data, fit)
+    err_fun = error_gen(function, y_data, x_data, fit)
     new_fit = marching_sphere(function=err_fun,
                               start=fit,
-                              steps=100,
+                              steps=steps,
                               dstnc=step,
-                              rate=0.8,
-                              selector=min)
+                              rate=rate,
+                              selector=selector)
     marching_stop = time.process_time()
     msg = f"main: Marching time: {marching_stop-start}."
-    m_fit = [new_fit[0][3*m:3*(m+1)] for m in range(int(len(new_fit[0])/3))]
+    m_fit = [new_fit[0][3*m:3*(m+1)] for m in range(N_PEAKS)]
     print(msg)
     logging.info(msg)
     w_len = len(wave[waveform_nr])
@@ -319,15 +344,18 @@ def main():
         sum_time += stop-step
         logging.info("main: Approximation ETA:"
                      f" {stop-main_time - len(m_fit)*sum_time/(f+1)}")
-
     # final results presentation
+    plt.figure()
     plt.plot(wave[0], inte[0], linewidth=0.5)
     plt.plot(wave[0], lor, linewidth=0.5)
     plt.plot(wave[0], [(abs(inte[0][n]-lor[n]))
                        for n in range(w_len)], linewidth=0.5)
     plt.legend(["Data points", "Fit", "Absolute error"])
     print(f"main: Time consumption: {time.process_time()-start}")
-    logging.info(f"main: Time consumption: {time.process_time()-start}")
+    logging.info(f"main: Total time consumption: {time.process_time()-start}")
+    plt.figure()
+    print(new_fit[-1])
+    plt.plot(range(len(new_fit[-1])), [math.log(nf) for nf in new_fit[-1]]) 
     plt.show()
 
 
@@ -344,4 +372,4 @@ def set_globals(numb_peaks=1):
 
 
 if __name__ == "__main__":
-    main()
+    main(rate=0.8)
