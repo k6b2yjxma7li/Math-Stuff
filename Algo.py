@@ -355,7 +355,7 @@ def main(waveform_nr=0, scales=N_PEAKS*[1, 1, 1], function=lorentz2,
     logging.info(f"main: Total time consumption: {time.process_time()-start}")
     plt.figure()
     print(new_fit[-1])
-    plt.plot(range(len(new_fit[-1])), [math.log(nf) for nf in new_fit[-1]]) 
+    plt.plot(range(len(new_fit[-1])), [math.log(nf) for nf in new_fit[-1]])
     plt.show()
 
 
