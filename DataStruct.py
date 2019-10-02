@@ -240,8 +240,9 @@ class DataStruct(Helper):
             if '.csv' in file:
                 self.files.append(os.path.join(self.path, file))
         if self.files == []:
-            print("Warning: Path: {path} contains"
-                  " no CSV files to load.".format(path=self.path))
+            raise Warning("Path: {path} contains"
+                          " no CSV files to load.".format(path=self.path))
+            # print("Warning: )
 
     def load_data(self):
         """
@@ -311,8 +312,9 @@ def deriv(x_arg, y_arg, func=Helper.gravity_mean):
 
     Parameters:
     ---
-    +   `x_arg` Real part of data [iterable]
-    +   `y_arg` Imag part of data [iterable]
+    +   `x_arg` -- Real part of data [iterable]
+    +   `y_arg` -- Imag part of data [iterable]
+    +   `func` -- approximation function for edges (deprecated)
     Both parameters must be of the same length; if not `IndexError`
     is raised.
 
@@ -339,13 +341,17 @@ def deriv(x_arg, y_arg, func=Helper.gravity_mean):
         raise ValueError("Parameter y_arg is too short: "
                          "{lenx}.".format(lenx=len(x_arg)))
     dydx = ()
-    for n in range(len(x_arg)-1):
-        dy = y_arg[n]-y_arg[n+1]
-        dx = x_arg[n]-x_arg[n+1]
+    h = sum([x_arg[n+1]-x_arg[n] for n in range(len(x_arg)-1)])/len(x_arg[:-1])
+    for n in range(1, len(x_arg)-1):
+        dy = y_arg[n+1]-y_arg[n-1]
+        dx = x_arg[n+1]-x_arg[n-1]
         dydx += (dy/dx, )
         c_dydx = list(dydx).copy()
         c_dydx.reverse()
-    dydx += (func(c_dydx), )
+    # dydx += (func(c_dydx), )
+    dydx = (((y_arg[2] - 4*y_arg[1] + 3*y_arg[0])/(-2*h),)
+            + dydx
+            + ((y_arg[-3] - 4*y_arg[-2] + 3*y_arg[-1])/(2*h),))
     print(communicate[0], end="")
     return dydx
 
@@ -690,7 +696,7 @@ def linear_fit(x_arg, y_arg, err=False):
 
     Description:
     ---
-    Angle coefficient of two-way derivative
+    Linear fitting of specified dataset.
 
     Parameters:
     ---

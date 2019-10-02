@@ -23,6 +23,9 @@ import math
 import time                         # estimating elapsed time
 import logging                      # logging!
 
+exp = math.exp
+log = math.log
+
 N_PEAKS = 10
 
 # LOGGING BLOCK
@@ -216,7 +219,7 @@ functions to estimate given spectrum.
 """
 
 
-def observe(y_arg, x_arg):
+def observe(y_arg, x_arg, peaks_nr=N_PEAKS):
     """
     `Algo` function: `observe`
     ---
@@ -235,7 +238,7 @@ def observe(y_arg, x_arg):
     logging.debug(f"observe({type(y_arg)}, {type(x_arg)})")
     sum_time = 0.0
     data_set = []
-    for akn in range(N_PEAKS):                      # find N_PEAKS nr of curves
+    for akn in range(peaks_nr):                      # find N_PEAKS nr of curves
         start = time.process_time()
         peaks = peak_find(y_arg)                      # peak finding
         b_val = 0
@@ -268,8 +271,9 @@ def observe(y_arg, x_arg):
     return data_set
 
 
-def main(waveform_nr=0, scales=N_PEAKS*[1, 1, 1], function=lorentz2,
-         steps=100, rate=0.7, selector=min):
+def main(waveform_nr=0, scales=N_PEAKS*[1, 1, 1],
+         function=lambda a, b, x0, x: lorentz2(exp(a), exp(b), x0, x),
+         steps=200, rate=0.5, selector=min):
     """
     `Algo` main method
     ---
@@ -309,7 +313,7 @@ def main(waveform_nr=0, scales=N_PEAKS*[1, 1, 1], function=lorentz2,
     # Marching sphere block
     # expected to take 0.5s/iteration
     fit = observe(y_data, x_data)   # main algorithm call
-    fit = [[f[0], (2/f[1])**2, f[2]] for f in fit]
+    fit = [[log(abs(f[0])), log(abs((2/f[1])**2)), f[2]] for f in fit]
     fit_tmp = []
     [fit_tmp.extend(f) for f in fit]
     fit = fit_tmp
@@ -339,7 +343,7 @@ def main(waveform_nr=0, scales=N_PEAKS*[1, 1, 1], function=lorentz2,
     for f in range(len(m_fit)):      # for-loop to sum all Lorentz's
         step = time.process_time()
         for n in range(w_len):
-            lor[n] += lorentz2(*m_fit[f], x_data[n])
+            lor[n] += function(*m_fit[f], x_data[n])
         stop = time.process_time()
         sum_time += stop-step
         logging.info("main: Approximation ETA:"
@@ -354,8 +358,11 @@ def main(waveform_nr=0, scales=N_PEAKS*[1, 1, 1], function=lorentz2,
     print(f"main: Time consumption: {time.process_time()-start}")
     logging.info(f"main: Total time consumption: {time.process_time()-start}")
     plt.figure()
-    print(new_fit[-1])
+    # print(new_fit[-1])
     plt.plot(range(len(new_fit[-1])), [math.log(nf) for nf in new_fit[-1]])
+    plt.legend(["Error level"])
+    plt.xlabel("Step")
+    plt.ylabel("log(Error)")
     plt.show()
 
 
@@ -372,4 +379,4 @@ def set_globals(numb_peaks=1):
 
 
 if __name__ == "__main__":
-    main(rate=0.8)
+    main(rate=0.8, scales=N_PEAKS*[0.5, 1, 2])

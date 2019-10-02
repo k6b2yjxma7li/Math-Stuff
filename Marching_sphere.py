@@ -8,6 +8,7 @@ Description:
 This algorithm is simple approach to using idea of Lagrange mechanics to
 deduce extrema of a given function. The file consists of several functions
 to perform necessary calculations. Caution: it takes a lot of time.
+version: 20190907.1
 """
 import logging
 import time
@@ -193,13 +194,6 @@ def marching_sphere(function, start, steps=1e+4, dstnc=1.0, rate=0.5,
         try:
             # set of points that are located on axes of multidimensional space
             sphere = sphere_generator(dim, rad, last)
-            # this was first attempt at regulating accuracy; now obsolete
-            rad = list(map(lambda x: x*rate, rad))
-            # accuracy change step
-            if progress < 1:
-                rate = rate**rate
-                rad = dstnc
-                dstnc = list(map(lambda x: x*rate, dstnc))
             if progress == 0:
                 final_countdown += 1
             else:
@@ -212,7 +206,7 @@ def marching_sphere(function, start, steps=1e+4, dstnc=1.0, rate=0.5,
                 break
             # list of points from which one is selected
             point = [function(*[sphere[l][k] for l in range(dim)])
-                     for k in range(2*dim)]
+                     for k in range(len(sphere[0]))]
             # error of wrong input function result
             if type(point[0]) not in [float, int]:
                 msg = (f"marching_sphere: Function `{function.__name__}` does"
@@ -223,6 +217,17 @@ def marching_sphere(function, start, steps=1e+4, dstnc=1.0, rate=0.5,
             selected_index = point.index(selector(point))
             # actual selected point (basing on id)
             last = [sphere[l][selected_index] for l in range(dim)]
+            # this was first attempt at regulating accuracy; now obsolete
+            # half_ix = selected_index % dim
+            # rad = list(map(lambda x: x*rate, rad))
+            # rad[half_ix] /= rate
+            rad = list(map(lambda x: x*rate, rad))
+            # accuracy change step
+            if progress < 1:
+                rate = rate**rate
+                rad = dstnc
+                dstnc = list(map(lambda x: x*rate, dstnc))
+                # dstnc[half_ix] *= rate
             progress = (1-function(*last)/function(*[d[-1] for d in data]))*100
             the_progress.append((function(*last)/function(*start))*100)
             print(f"{n}\t{progress}%\t{100-the_progress[-1]}%")
