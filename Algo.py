@@ -15,8 +15,6 @@ errors nor warnings with this setup.
 """
 
 import matplotlib.pyplot as plt     # plots!
-from __Main import wave             # wave data for specified exps
-from __Main import inte             # intensity data
 import DataStruct as ds             # to use some of functions
 from Marching_sphere import marching_sphere   # fitting!
 import math
@@ -26,6 +24,7 @@ import logging                      # logging!
 exp = math.exp
 log = math.log
 
+global N_PEAKS
 N_PEAKS = 10
 
 # LOGGING BLOCK
@@ -98,7 +97,7 @@ def lorentz2(A, b, x0, x_arg):
     + `x0` -- argument of maximum point
     + `x_arg` -- curve's argument
     """
-    return abs(A)/(1+abs(b)*(x_arg-x0)**2)
+    return abs(A)/(1+(b*(x_arg-x0))**2)
 
 
 def lorentz3(A, C, x0, x_arg):
@@ -219,7 +218,7 @@ functions to estimate given spectrum.
 """
 
 
-def observe(y_arg, x_arg, peaks_nr=N_PEAKS):
+def observe(y_arg, x_arg, peaks_nr=N_PEAKS, bias=[0, 0, 0]):
     """
     `Algo` function: `observe`
     ---
@@ -238,12 +237,12 @@ def observe(y_arg, x_arg, peaks_nr=N_PEAKS):
     logging.debug(f"observe({type(y_arg)}, {type(x_arg)})")
     sum_time = 0.0
     data_set = []
-    for akn in range(peaks_nr):                      # find N_PEAKS nr of curves
+    for akn in range(peaks_nr):                     # find N_PEAKS nr of curves
         start = time.process_time()
-        peaks = peak_find(y_arg)                      # peak finding
+        peaks = peak_find(y_arg)                     # peak finding
         b_val = 0
         for m in range(1, 10000, 10):               # course-search for-loop
-            s = peaks[0](m, x_arg, x_arg[peaks[1]])     # lorentz_arr
+            s = peaks[0](m+bias[1], x_arg, x_arg[peaks[1]]+bias[2])     # lorentz_arr
             ch_val = ds.pearson(y_arg, s)           # Pearson's R value check
             if ch_val > b_val:
                 b_val = ch_val
@@ -252,16 +251,16 @@ def observe(y_arg, x_arg, peaks_nr=N_PEAKS):
                 break
         fine_val = 0
         for m in range(len(EY)):                    # fine-search for-loop
-            s = peaks[0](b_val+EY[m], x_arg, x_arg[peaks[1]])
+            s = peaks[0](b_val+EY[m]+bias[1], x_arg, x_arg[peaks[1]]+bias[2])
             ch_val = ds.pearson(y_arg, s)
             if ch_val > fine_val:
                 fine_val = ch_val
             else:
-                fine_val = b_val+EY[m]
+                fine_val = b_val+EY[m]+bias[1]
                 break
-        data_set.append([peaks[2], fine_val, x_arg[peaks[1]]])  # main dataset
+        data_set.append([peaks[2]+bias[0], fine_val, x_arg[peaks[1]]+bias[2]])  # main dataset
         # data_set.append(out[0])  # main dataset
-        lor = lorentz_arr(peaks[2], fine_val, x_arg, x_arg[peaks[1]])
+        lor = lorentz_arr(peaks[2]+bias[0], fine_val, x_arg, x_arg[peaks[1]]+bias[2])
         # lor = lorentz_arr(out[0][0], out[0][1], x_arg, out[0][2])
         # y_arg change to eliminate found peaks
         y_arg = [y_arg[n]-lor[n] for n in range(len(y_arg))]
@@ -271,9 +270,9 @@ def observe(y_arg, x_arg, peaks_nr=N_PEAKS):
     return data_set
 
 
-def main(waveform_nr=0, scales=N_PEAKS*[1, 1, 1],
-         function=lambda a, b, x0, x: lorentz2(exp(a), exp(b), x0, x),
-         steps=200, rate=0.5, selector=min):
+def main(x_data, y_data, scales=N_PEAKS*[1, 1, 1],
+         function=lambda a, b, x0, x: lorentz2(a, b, x0, x),
+         steps=200, rate=0.5, selector=min, graphic=False):
     """
     `Algo` main method
     ---
@@ -298,6 +297,7 @@ def main(waveform_nr=0, scales=N_PEAKS*[1, 1, 1],
     + `steps`:int -- number of `marching_sphere` steps
     + `rate`:float -- scaling value of `marching_sphere`
     + `selector`:function_obj -- `marching_sphere` selecting function
+    + `graphic`:bool -- plots showed immediately if `True`
     For further explanation of least three parameters see docstring of
     `Marching_sphere.marching_sphere`.
 
@@ -307,19 +307,22 @@ def main(waveform_nr=0, scales=N_PEAKS*[1, 1, 1],
     moment. Following updates will introduce fully custom fit functions.
     Work is in progress.
     """
-    x_data = wave[waveform_nr]
-    y_data = inte[waveform_nr]
+    global N_PEAKS
     start = time.process_time()
     # Marching sphere block
     # expected to take 0.5s/iteration
-    fit = observe(y_data, x_data)   # main algorithm call
-    fit = [[log(abs(f[0])), log(abs((2/f[1])**2)), f[2]] for f in fit]
+    print("Observing started...")
+    fit = observe(y_data, x_data, N_PEAKS)   # main algorithm call
+    print(f"Spectrum observed. Time: {time.process_time()-start}s")
+    fit = [[abs(f[0]), abs(2/f[1]), f[2]] for f in fit]
     fit_tmp = []
     [fit_tmp.extend(f) for f in fit]
     fit = fit_tmp
     # scales = N_PEAKS*[0.9, 5.0, 2.0]
     step = [fit[n]*scales[n] for n in range(len(fit))]
     err_fun = error_gen(function, y_data, x_data, fit)
+    logging.debug(f"Starting point: {fit}")
+    print(f"Starting error:\t{err_fun(fit)}")
     new_fit = marching_sphere(function=err_fun,
                               start=fit,
                               steps=steps,
@@ -331,9 +334,10 @@ def main(waveform_nr=0, scales=N_PEAKS*[1, 1, 1],
     m_fit = [new_fit[0][3*m:3*(m+1)] for m in range(N_PEAKS)]
     print(msg)
     logging.info(msg)
-    w_len = len(wave[waveform_nr])
+    w_len = len(x_data)
     lor = [0 for n in range(w_len)]   # init of estimation dataset
-
+    print(f"Final error: {err_fun(new_fit[0])}")
+    logging.debug(f"Ending point: {new_fit[0]}")
     # this gonna take some time, but also it will count it!
     sum_time = 0.0
     main_time = time.process_time()
@@ -350,10 +354,10 @@ def main(waveform_nr=0, scales=N_PEAKS*[1, 1, 1],
                      f" {stop-main_time - len(m_fit)*sum_time/(f+1)}")
     # final results presentation
     plt.figure()
-    plt.plot(wave[0], inte[0], linewidth=0.5)
-    plt.plot(wave[0], lor, linewidth=0.5)
-    plt.plot(wave[0], [(abs(inte[0][n]-lor[n]))
-                       for n in range(w_len)], linewidth=0.5)
+    plt.plot(x_data, y_data, linewidth=0.5)
+    plt.plot(x_data, lor, linewidth=0.5)
+    plt.plot(x_data, [(abs(y_data[n]-lor[n]))
+                      for n in range(w_len)], linewidth=0.5)
     plt.legend(["Data points", "Fit", "Absolute error"])
     print(f"main: Time consumption: {time.process_time()-start}")
     logging.info(f"main: Total time consumption: {time.process_time()-start}")
@@ -363,7 +367,9 @@ def main(waveform_nr=0, scales=N_PEAKS*[1, 1, 1],
     plt.legend(["Error level"])
     plt.xlabel("Step")
     plt.ylabel("log(Error)")
-    plt.show()
+    if graphic:
+        plt.show()
+    return new_fit[0]
 
 
 def set_globals(numb_peaks=1):
@@ -379,4 +385,5 @@ def set_globals(numb_peaks=1):
 
 
 if __name__ == "__main__":
-    main(rate=0.8, scales=N_PEAKS*[0.5, 1, 2])
+    from new_hope import w, i
+    main(list(w), list(i), rate=0.8, scales=N_PEAKS*[0.5, 1, 2])

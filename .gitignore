@@ -7,3 +7,5 @@ notatka
 *.jp*g
 # for hidden files
 .*
+__*
+TODO

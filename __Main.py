@@ -11,8 +11,7 @@ def ceil(value):
     return int(value)+1
 
 
-data = ds.DataStruct("/home/rumcajs/Desktop/"
-                     "Inzynierka/Dane/raport_1/grafen_csv")
+data = ds.DataStruct("D:/Praca_inzynierska/Badania/190523/grf")
 
 # data = ds.DataStruct("./")
 

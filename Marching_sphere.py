@@ -140,7 +140,10 @@ def marching_sphere(function, start, steps=1e+4, dstnc=1.0, rate=0.5,
 
     Returns:
     ---
+    + `last`: tuple(float); vector defining extremum
     + `point`: tuple(float); extremum point of `function`
+    + `data`: list(tuple(float)); history of `last`
+    + `the_progress`: float; percent of error reduced
 
     Raises:
     ---
@@ -200,7 +203,7 @@ def marching_sphere(function, start, steps=1e+4, dstnc=1.0, rate=0.5,
                 final_countdown = 0
             if final_countdown > 7:
                 msg = ("marching_sphere: Premature loop break due"
-                       " to no progress.")
+                       " to no visible progress.")
                 logging.warn(msg)
                 print(msg)
                 break
@@ -208,9 +211,11 @@ def marching_sphere(function, start, steps=1e+4, dstnc=1.0, rate=0.5,
             point = [function(*[sphere[l][k] for l in range(dim)])
                      for k in range(len(sphere[0]))]
             # error of wrong input function result
-            if type(point[0]) not in [float, int]:
+            pt_type = str(type(point[0]))
+            if "float" not in pt_type and "int" not in pt_type:
                 msg = (f"marching_sphere: Function `{function.__name__}` does"
-                       " not return single numerical value as output.")
+                       " not return single numerical value as output."
+                       f" Returned: {pt_type}.")
                 logging.error(msg)
                 raise TypeError(msg)
             # id of selected point of a sphere

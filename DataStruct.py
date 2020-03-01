@@ -407,7 +407,7 @@ def nearest(iterable, value, order=0):
     """
     Description:
     ---
-    Returns closest value to the specified `value`argument by calculating:
+    Returns closest value to the specified `value` argument by calculating:
     abs([`iterable`]-`value`)
     and sorting an output. `order` specifies index of
     sorted iterable (n-th closest value).
