@@ -5,3 +5,5 @@ notatka
 *.png
 *.svg
 *.jp*g
+# for hidden files
+.*
