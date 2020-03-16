@@ -19,7 +19,7 @@ class table(dict):
 
     Data can be accessed row-wise (numerical) or column-wise.
     """
-    def __init__(self, plain_dict):
+    def __init__(self, plain_dict=dict()):
         """
         `nano`.`table` constructor (from plain `dict`)
         """
@@ -46,6 +46,7 @@ class table(dict):
                     self.__dict__[k] += [float(v)]
                 except ValueError:
                     self.__dict__[k] += [v]
+        return self
 
     def __str__(self):
         result = ""
@@ -73,6 +74,12 @@ class table(dict):
     def __add__(self, tbl):
         sf = self.copy()
         return sf.update(tbl)
+
+    def keys(self):
+        return self.__dict__.keys()
+
+    def items(self):
+        return self.__dict__.items()
 
 
 def converter(filepath,
@@ -130,13 +137,44 @@ def nearest_val(iterable, value):
 
 
 def pearson(u, v, estimator=np.mean):
+    """
+    `nano`.`pearson`
+    ===
+    Computes value of Pearson's R correlation coefficient
+    between `u` and `v` with a given expected value estimator
+    function `estimator`.
+
+    Returns
+    ---
+    Pearson's R correlation coefficient.
+    """
     def cov(p, q, estimator=estimator):
+        """
+        `nano`.`pearson`.`cov`
+        ---
+        Computes value of covariance for `p` and `q` using
+        `estimator` function as expected value estimator.
+
+        Returns
+        ---
+        Covariance of `p` and `q`.
+        """
         p = np.array(p)
         q = np.array(q)
         res = estimator(p*q) - estimator(p)*estimator(q)
-        return res 
+        return res
 
     def stddev(t, estimator=estimator):
+        """
+        `nano`.`pearson`.`stddev`
+        ---
+        Computes value of standard deviation for `t` using
+        `estimator` function as expected value estimator.
+
+        Returns
+        ---
+        Standard deviation of `t`.
+        """
         t = np.array(t)
         res = (estimator(t**2) - estimator(t)**2)**0.5
         return res
@@ -151,11 +189,133 @@ def pearson(u, v, estimator=np.mean):
 
 
 def div(function, dx):
+    """
+    `nano`.`div`
+    ===
+    Double point derivative of a `function` function, with step
+    `dx`. Second parameter has to be tuned to reach maximal
+    precision of derivative.
+
+    Returns
+    ---
+    Function object of derivative.
+    """
     # if x is not None and dx is None:
     #     dx = x[]
     def DIV(x):
         return (function(x+dx)-function(x-dx))/(2*dx)
     return DIV
+
+
+def d(u):
+    """
+    `nano`.`d`
+    ===
+    Two-point discrete derivative of `u`.
+
+    Returns
+    ---
+    Array of values corresponding to discrete derivative
+    of function's main argument `u`.
+    """
+    u = np.array(u)
+    center = list((u[2:]-u[:-2])/4)
+    left = [(u[1]-u[0])/2]
+    right = [(u[-1]-u[-2])/2]
+    return np.array(left + center + right)
+
+
+def gauss_av(sgm, u, v):
+    """
+    `nano`.`gauss_av`
+    ===
+    Special type of average. Uses Gauss curve as a window over
+    data, where amplitude is driven by position of peak. Average
+    applies for all points, which transforms data. The resulting
+    array is smoothened.
+
+    Arguments
+    ---
+    + `sgm`: float -- window width parameter, standard deviation
+    of normal distribution (window)
+    + `u`: array -- x-data
+    + `v`: array -- y-data
+    """
+    def G(s):
+        def GAUSS(u): return 1/(s*(2*np.pi)**(0.5)) * np.exp(-(u**2)/(2*s**2))
+        return GAUSS
+    res = []
+    gs = G(sgm)
+    for n in range(len(u)):
+        g = gs(u-u[n])
+        res += [sum(g*v*d(u))/(sum(g*d(u)))]
+    return np.array(res)
+
+
+def smoothing(t=[], mod=1):
+    """
+    `nano`.`smoothing`
+    ===
+    Similar to `gauss_av`. Performs averaging over data using
+    second row of Pascal's triangle as a mask:
+    (t[n-1]+2*t[n]+t[n+1])/4 = result
+
+    Arguments
+    ---
+    + `t`: array -- data set
+    + `mod`: int -- number of iterations (effective width of
+    window)
+
+    Returns
+    ---
+    Smoothened data (array).
+    """
+    t = np.array(t)
+
+    def single_smoothing(f):
+        df = (f[:-2]+2*f[1:-1]+f[2:])/4
+        left = [(f[0]+f[1])/2]
+        right = [(f[-2]+f[-1])/2]
+        return np.append(left, np.append(df, right))
+
+    for n in range(mod):
+        t = single_smoothing(t)
+    setattr(smoothing, "smooth", single_smoothing)
+    return t
+
+
+def xpeak(x_data, y_data, top_value, min_level):
+    """
+    `nano`:`xpeak`
+    ===
+    Extract points of single peak from data set.
+
+    Arguments
+    ---
+    + `x_data`: array -- x-data
+    + `y_data`: array -- y-data
+    + `top_position`: float -- index of peak
+    + `min_level`: float -- minimal level, where peak has it's bottom
+
+    Returns
+    ---
+    New array, shorter than initial data set, containing extracted
+    peak's indices points.
+    """
+    #  Magic happens
+    itr = list(nearest_val(x_data, x_data[top_value == y_data][0]))
+    ind = np.arange(0, len(itr), 1)
+    clutch = list(zip(itr, ind))
+    clutch = sorted(clutch, key=lambda t: t[0])
+    clutch = list(zip(clutch, y_data))
+    clutch = sorted(clutch, key=lambda t: t[0][1])
+    #  Every day
+    y_sort = list(dict(clutch).values())
+    for n in range(len(y_sort)):
+        if y_sort[n] < min_level:
+            break
+    # res = 
+    return np.array(sorted(itr[:n]))
 
 
 if __name__ == "__main__":
