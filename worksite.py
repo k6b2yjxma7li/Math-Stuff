@@ -25,6 +25,17 @@ def spectrum(function, arg_count):
     return SPCTRM
 
 
+def asym(x_data, y_data, x0):
+    split_pt = next(nearest_val(x_data, x0))
+    left_y = y_data[:split_pt+1]
+    right_y = y_data[split_pt:len(left_y)+split_pt]
+    left_y = left_y[-len(right_y):]
+    left_int = sum(left_y*d(x_data[split_pt-len(left_y):split_pt]))
+    right_int = sum(right_y*d(x_data[split_pt:split_pt+len(right_y)]))
+    return right_int-left_int
+    # return np.cumsum((right_y-left_y)*)
+
+
 def main():
     file_path = os.path.join(path, datafiles[0])
     print(file_path)
@@ -35,14 +46,18 @@ def main():
 
     def f(V, u): return V[0]/(((u-V[2])*V[1])**2 + 1)
 
-    fig, ax = plt.subplots()
-    # yd = np.cumsum(d(y))
-    yd = y - y[0]
-    Yd2 = np.cumsum(np.cumsum(yd*d(x))*d(x))
-    tp1 = xpeak(x, yd, max(yd), 0)
+    def res(V): return y - raman(x, V)
+
+    def nRes2(V): return -np.cumsum(np.cumsum(res(V) * d(x)) * d(x))
+
+    # fig, ax = plt.subplots()
+    # # yd = np.cumsum(d(y))
+    # yd = y - y[0]
+    # Yd2 = np.cumsum(np.cumsum(yd*d(x))*d(x))
+    # tp1 = xpeak(x, yd, max(yd), 0)
     
-    ax.plot(x, yd, '.', ms=0.9)
-    ax.plot(x[tp1[0]+1:tp1[-1]+1], yd[tp1[0]+1:tp1[-1]+1], '.', color="red")
+    # ax.plot(x, yd, '.', ms=0.9)
+    # ax.plot(x[tp1[0]+1:tp1[-1]+1], yd[tp1[0]+1:tp1[-1]+1], '.', color="red")
 
     fig, ax = plt.subplots()
     ax.grid(True)
@@ -50,7 +65,7 @@ def main():
 
     scaling_factor = 0.95
     raman = spectrum(f, 3)
-    def res(V): return y - raman(x, V)
+
     x0 = x[int(len(x)/2)]
     y0 = y[int(len(x)/2)]
     residual = y
@@ -78,12 +93,27 @@ def main():
 
     sol[mask] /= scaling_factor
     ax.plot(x, raman(x, sol), lw=0.9, color="red")
-    ax.plot(x, res(sol), '.', ms=0.9, color="red")
+    
 
-    #  Residual's integral shows imperfections of fitting
-    Res = np.cumsum(res(sol)*d(x))
-    ax2 = ax.twinx()
-    ax2.plot(x, -np.cumsum(Res*d(x)), lw=0.9, color="black")
+    #   Preparing to extraction of maximum
+    nRes2V = nRes2(sol)
+    axd = ax.twinx()
+    #   Depiction of nRes2
+    axd.plot(x, np.abs(nRes2V), lw=0.8, color='black')
+    axd.plot(x[np.abs(nRes2V) == max(np.abs(nRes2V))],
+             nRes2V[np.abs(nRes2V) == max(np.abs(nRes2V))],
+             '.', color=[1, 0, 1, 1])
+    #   Proper peak params extraction
+    ix = xpeak(x, nRes2V, max(nRes2V), max(nRes2V)/2)
+    #   Half-max width
+    # hmw = abs(ix[0]-ix[-1])
+    # x0 = list(nRes2V).index(min(nRes2V))
+    # Amp = sum(f([1, 1/hmw, x[x0]], x)*res(sol)/sum(f([1, 1/hmw, x[x0]], x))*d(x))
+    # print([Amp, 1/hmw, x[x0]])
+    # sol, hess = leastsq(res, list(sol)+[Amp, 1/hmw, x0])
+    # ax.plot(x, raman(x, sol), lw=1.5, color=[1, 0, 1, 1])
+    # axd.plot(x, nRes2(sol), '--', lw=0.9, color='black')
+    # ax.plot(x, res(sol), '.', ms=0.9, color='red')
     plt.show()
 
 

@@ -302,20 +302,20 @@ def xpeak(x_data, y_data, top_value, min_level):
     New array, shorter than initial data set, containing extracted
     peak's indices points.
     """
-    #  Magic happens
-    itr = list(nearest_val(x_data, x_data[top_value == y_data][0]))
-    ind = np.arange(0, len(itr), 1)
-    clutch = list(zip(itr, ind))
-    clutch = sorted(clutch, key=lambda t: t[0])
-    clutch = list(zip(clutch, y_data))
-    clutch = sorted(clutch, key=lambda t: t[0][1])
-    #  Every day
-    y_sort = list(dict(clutch).values())
-    for n in range(len(y_sort)):
-        if y_sort[n] < min_level:
+    itr_peak = next(nearest_val(y_data, top_value))
+    # y_peak = y_data[itr_peak]
+    x_peak = x_data[itr_peak]
+    itr_left = list(x_data).index(x_peak)
+    itr_right = list(x_data).index(x_peak)
+    for n in range(itr_right, len(x_data), 1):
+        if y_data[n] <= min_level:
             break
-    # res = 
-    return np.array(sorted(itr[:n]))
+    itr_right = n
+    for k in range(itr_left, -1, -1):
+        if y_data[k] <= min_level:
+            break
+    itr_left = k
+    return itr_left, itr_right
 
 
 if __name__ == "__main__":
