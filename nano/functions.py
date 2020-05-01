@@ -1,90 +1,18 @@
 # The nano module
 
 """
-The nano module
+`nano`'s `functions`
 ===
-
-Collection of useful elements, data structures, functions, etc.
 """
 import numpy as np
-import csv
 import os
-
-
-class table(dict):
-    """
-    `nano`.`table`
-    ===
-    Dict-based table with column/row access to data.
-
-    Data can be accessed row-wise (numerical) or column-wise.
-    """
-    def __init__(self, plain_dict=dict()):
-        """
-        `nano`.`table` constructor (from plain `dict`)
-        """
-        self.__dict__ = plain_dict
-
-    def read_csv(self, file_stream, delim='\t'):
-        """
-        CSV reader storing data in self `nano`.`table` .
-        """
-        # import csv
-        self.__fstream__ = file_stream
-        self.__delim__ = delim
-        csvdict = csv.DictReader(self.__fstream__, delimiter=delim)
-        self.__dict__ = {}
-        _csv_ = dict(next(csvdict))
-        for k, v in _csv_.items():
-            try:
-                self.__dict__[k] = [float(v)]
-            except ValueError:
-                self.__dict__[k] = [v]
-        for line in csvdict:
-            for k, v in line.items():
-                try:
-                    self.__dict__[k] += [float(v)]
-                except ValueError:
-                    self.__dict__[k] += [v]
-        return self
-
-    def __str__(self):
-        result = ""
-        for k, v in self.__dict__.items():
-            if hasattr(v, '__len__'):
-                if len(v) > 4:
-                    result += (f"\t{k}: {str(v[:3])[:-1]}" +
-                               f" and {len(v)-3} more...\n")
-            else:
-                result += f"\t{k}: {v},\n"
-        return "table object:\n" + result
-
-    def __getitem__(self, key):
-        result = {}
-        if type(key) is slice:
-            for k, v in self.__dict__.items():
-                result.update({k: v[key]})
-        elif key in self.__dict__.keys():
-            result = self.__dict__[key]
-        elif type(key) is int:
-            for k, v in self.__dict__.items():
-                result.update({k: v[key]})
-        return result
-
-    def __add__(self, tbl):
-        sf = self.copy()
-        return sf.update(tbl)
-
-    def keys(self):
-        return self.__dict__.keys()
-
-    def items(self):
-        return self.__dict__.items()
 
 
 def converter(filepath,
               action=lambda line: "\t".join([w for w in line.split("\t")
-                                             if w])):
+                                             if w]),
+              file_ext=None,
+              tmp_purge=False):
     """
     `nano`.`converter`
     ===
@@ -93,8 +21,14 @@ def converter(filepath,
     """
     # import os
     dir, filename = os.path.split(filepath)
+    if file_ext is not None:
+        filename = os.path.basename(filename) + "." + file_ext
+        filepath = os.path.join(dir, filename)
     tmpname = os.path.basename(filename) + ".tmp"
     tmpfile = os.path.join(dir, tmpname)
+    # _, _, tmps = next(os.walk(dir))
+    # print(tmps)
+    # os.remove()
     if os.path.isfile(filepath):
         try:
             os.rename(filepath, tmpfile)
@@ -219,9 +153,9 @@ def d(u):
     of function's main argument `u`.
     """
     u = np.array(u)
-    center = list((u[2:]-u[:-2])/4)
-    left = [(u[1]-u[0])/2]
-    right = [(u[-1]-u[-2])/2]
+    center = list((u[2:]-u[:-2])/2)
+    left = [(u[1]-u[0])]
+    right = [(u[-1]-u[-2])]
     return np.array(left + center + right)
 
 
@@ -290,6 +224,10 @@ def xpeak(x_data, y_data, top_value, min_level):
     ===
     Extract points of single peak from data set.
 
+    For a negative peak (dip) `y_data` and `top_value` have to negated.
+    Function does not provide out-of-the-box support for extracting negative
+    peaks.
+
     Arguments
     ---
     + `x_data`: array -- x-data
@@ -299,8 +237,8 @@ def xpeak(x_data, y_data, top_value, min_level):
 
     Returns
     ---
-    New array, shorter than initial data set, containing extracted
-    peak's indices points.
+    (`itr_left`, `itr_peak`, `itr_right`)
+        Array containing left boundary, peak and right boundary index values.
     """
     itr_peak = next(nearest_val(y_data, top_value))
     # y_peak = y_data[itr_peak]
@@ -315,7 +253,7 @@ def xpeak(x_data, y_data, top_value, min_level):
         if y_data[k] <= min_level:
             break
     itr_left = k
-    return itr_left, itr_right
+    return itr_left, itr_peak, itr_right
 
 
 if __name__ == "__main__":
