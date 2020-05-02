@@ -11,7 +11,7 @@ from scipy.optimize import leastsq
 
 from nano.functions import d, nearest_val, pearson, smoothing, xpeak
 from nano.table import table
-from nano.addfun import gdev, lorentz
+from nano.addfun import gdev, lorentz, residual, spectrum
 
 warnings.filterwarnings("ignore")
 
@@ -237,7 +237,6 @@ for n in range(0, len(sol)-1, 3):
         else:
             ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2, color=glob_style([1,0,0]))
             ax.text(sol[n:n+3][2], 14000, f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][0]),1))}")
-# ax1 = plt.twinx(ax)
 fig.savefig(f"./.data/{direct}/comp/average_{direct}_comp.pdf")
 
 # %%
@@ -416,7 +415,6 @@ for dset in tbl.keys():
             else:
                 ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2, color=glob_style([1,0,0]))
                 ax.text(sol[n:n+3][2], 14000, f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][0]),1))}")
-    # ax1 = plt.twinx(ax)
     fig.savefig(f"./.data/{direct}/comp/{dset}_{direct}_comp.pdf")
 
 

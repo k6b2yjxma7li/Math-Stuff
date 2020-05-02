@@ -164,7 +164,7 @@ def residual(func, x, y, penalty=None):
     if penalty is None:
         penalty = np.linspace(1, 1, len(y))
 
-    def RES(V):
+    def RES(v):
         """`RES`
         ---
         Result function of `residual`
@@ -179,14 +179,14 @@ def residual(func, x, y, penalty=None):
         `array`
             Difference between y-data and fitted points
         """
-        ye = func(V, x)
+        ye = func(v, x)
         return (y-ye)/penalty
     return RES
 
 
-def lorentz(V, t):
+def lorentz(v, t):
     t = np.array(t)
-    return abs(V[0])/(1+((t-V[2])/V[1])**2)
+    return abs(v[0])/(1+((t-v[2])/v[1])**2)
 
 
 def integr(y_arg, x_arg):
