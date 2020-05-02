@@ -1,3 +1,6 @@
+""" `nano`.`addfun`
+Additional functions set for `nano` module
+"""
 import numpy as np
 from nano.functions import d, smoothing
 

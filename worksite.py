@@ -11,8 +11,7 @@ from scipy.optimize import leastsq
 
 from nano.functions import d, nearest_val, pearson, smoothing, xpeak
 from nano.table import table
-
-from addfun import *
+from nano.addfun import gdev, lorentz
 
 warnings.filterwarnings("ignore")
 
