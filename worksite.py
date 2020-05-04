@@ -19,8 +19,8 @@ glob_style = lambda clr: np.array([1,1,1,1])[:len(clr)]-np.array(clr)
 plt.style.use('dark_background')
 
 def percentage(u, v):
-    val = u/v
-    dig = abs(np.log(val))
+    val = 100*u/v
+    dig = int(abs(np.log(val)))
     return f"{round(val, dig)}%"
 
 
@@ -176,7 +176,7 @@ while True:
             #   popping three n-th elements in a row (removing A, hmhw, x0)
             for i in range(3):
                 sol.pop(n)
-    fig.savefig(f"./.data/{direct}/selector/average_selector_{direct}_{ix}.pdf")
+    # fig.savefig(f"./.data/{direct}/selector/average_selector_{direct}_{ix}.pdf")
     if False not in requirement:
         print("No trimming")
         break
@@ -219,7 +219,7 @@ ax[0].plot(x_av, lorentz(v, x_av), '-', color=glob_style([0,0,0,0.3]), lw=0.9, m
 ax[0].plot(x_av, raman(sol, x_av), '-', color=glob_style([1,0,0]), lw=0.9)
 ax[0].plot(x_av, raman(sol, x_av)+smoothing(r, K), '--', color=glob_style([1,0,0]), lw=0.9)
 
-fig.savefig(f"./.data/{direct}/fit/average_{direct}_fit.pdf")
+# fig.savefig(f"./.data/{direct}/fit/average_{direct}_fit.pdf")
 ## %%
 # Visual of spectrum components
 fig, ax = plt.subplots(figsize=(10, 10))
@@ -237,7 +237,7 @@ for n in range(0, len(sol)-1, 3):
         else:
             ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2, color=glob_style([1,0,0]))
             ax.text(sol[n:n+3][2], 14000, f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][0]),1))}")
-fig.savefig(f"./.data/{direct}/comp/average_{direct}_comp.pdf")
+# fig.savefig(f"./.data/{direct}/comp/average_{direct}_comp.pdf")
 
 # %%
 # Proper logic
@@ -354,7 +354,7 @@ for dset in tbl.keys():
                 #   popping three n-th elements in a row (removing A, hmhw, x0)
                 for i in range(3):
                     sol.pop(n)
-        fig.savefig(f"./.data/{direct}/selector/{dset}_selector_{direct}_{ix}.pdf")
+        # fig.savefig(f"./.data/{direct}/selector/{dset}_selector_{direct}_{ix}.pdf")
         ix += 1
         if False not in requirement:
             print("No trimming")
@@ -397,7 +397,7 @@ for dset in tbl.keys():
     ax[0].plot(x_av, raman(sol, x_av), '-', color=glob_style([1,0,0]), lw=0.9)
     ax[0].plot(x_av, raman(sol, x_av)+smoothing(r, K), '--', color=glob_style([1,0,0]), lw=0.9)
 
-    fig.savefig(f"./.data/{direct}/fit/{dset}_{direct}_fit.pdf")
+    # fig.savefig(f"./.data/{direct}/fit/{dset}_{direct}_fit.pdf")
     ## %%
     # Visual of spectrum components
     fig, ax = plt.subplots(figsize=(10, 10))
@@ -415,7 +415,7 @@ for dset in tbl.keys():
             else:
                 ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2, color=glob_style([1,0,0]))
                 ax.text(sol[n:n+3][2], 14000, f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][0]),1))}")
-    fig.savefig(f"./.data/{direct}/comp/{dset}_{direct}_comp.pdf")
+    # fig.savefig(f"./.data/{direct}/comp/{dset}_{direct}_comp.pdf")
 
 
 
