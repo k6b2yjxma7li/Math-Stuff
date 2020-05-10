@@ -27,8 +27,8 @@ def percentage(u, v):
 # %%
 # Data loading and preparations
 direct = "VH"
-measure = "polar_hbn"
-day = "190725"
+measure = "polar_grf"
+day = "190726"
 path = f"./.data/Praca_inzynierska/Badania/{day}/{measure}/{direct}"
 tdict = {}  # translation dict for accessing tables columns by integer
 tbl = table()
@@ -62,7 +62,7 @@ raman = spectrum(lorentz, 3)
 dif = residual(raman, x_av, y_av)
 ressq = residual(raman, x_av, y_av, 1/y_av**0.5)
 res = residual(raman, x_av, y_av, y_stdev)
-M = 50
+M = 20
 # scale = 1
 
 y = y_av
@@ -76,24 +76,73 @@ r = dif([0, 1, 1])
 # %%
 # Main resgd fitter
 
-while len(sol)/3 < curve_count:
-    gd = gdev(r, M)
-    resgd = residual(raman, x_av, y, 1/gd)
-    p = xpeak(x_av, gd, max(gd), max(gd)/2)
-    hmhw = abs(x_av[p[0]] - x_av[p[-1]])/2
-    Amp = r[p[1]]
-    x0 = (x_av[p[0]]+x_av[p[-1]])/2
-    v = [abs(Amp), hmhw, x0]
-    sol = list(sol)
-    sol += [Amp, hmhw, x0]
-    # if len(sol)/3 % 3 == 0 or curve_count - len(sol)/3 < 3:
-    sol, h = leastsq(resgd, sol)
-    r = dif(sol)
-    # print(f"{int(len(sol)/3)}: {r.dot(r)}")
-    print(f"{int(len(sol)/3)}: {percentage(r.dot(r), y.dot(y))}")
+# while len(sol)/3 < curve_count:
+gd = gdev(r, M)+gdev(r, 1000)
+resgd = residual(raman, x_av, y, 1/gd)
+p = xpeak(x_av, gd, max(gd), max(gd)/2)
+hmhw = abs(x_av[p[0]] - x_av[p[-1]])/2
+Amp = r[p[1]]
+x0 = (x_av[p[0]]+x_av[p[-1]])/2
+v = [abs(Amp), hmhw, x0]
+sol = list(sol)
+sol += [Amp, hmhw, x0]
+# if len(sol)/3 % 3 == 0 or curve_count - len(sol)/3 < 3:
+sol, h = leastsq(resgd, sol)
+r = dif(sol)
+# print(f"{int(len(sol)/3)}: {r.dot(r)}")
+# print(f"{int(len(sol)/3)}: {percentage(r.dot(r), y.dot(y))}")
 
 sola = sol.copy()
 
+## %%
+# Main fitter plotter
+K = M
+# res = residual(raman, x_av, y, y_stdev)
+r = dif(sol)
+fig, ax = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(10, 10))
+ax[0].set_title(f"Average data with stddev")
+ax[1].set_title("Residual with average and deviations")
+ax[0].plot(x_av, y, '.', ms=0.7, lw=0.7, color=glob_style([0,0,0]))
+ax[0].plot(x_av, y_stdev, '.', ms=0.7, lw=0.7, color=glob_style([0,0,1]))
+
+ax1 = plt.twinx(ax[0])
+# ax1.set_ylim([0, 2400])
+
+ax[1].plot(x_av, r, '.', lw=0.7, ms=0.8, color=glob_style([0,0,0]))
+
+ax2 = plt.twinx(ax[1])
+# ax2.set_ylim([0, 2400])
+ax2.plot(x_av, gdev(r, M), '-', lw=0.7, ms=0.7, color=glob_style([0,0,0]))
+ax2.plot(x_av, np.linspace(np.std(r), np.std(r), len(x_av)), '--', lw=0.7, ms=0.7, color=glob_style([0,0,1]))
+
+ax[1].plot(x_av, np.linspace(np.mean(r), np.mean(r), len(x_av)), '-.', lw=0.7, ms=0.7, color=glob_style([0,0,1]))
+ax[1].plot(x_av, smoothing(r, K), '--', lw=0.7, ms=0.7, color=glob_style([0,0,0]))
+
+ax1.plot(x_av, gdev(r, M), '-', lw=0.7, ms=0.7, color=glob_style([0,0,0]))
+
+ax[0].plot(x_av, lorentz(v, x_av), '-', color=glob_style([0,0,0,0.3]), lw=0.9, ms=0.9)
+ax[0].plot(x_av, raman(sol, x_av), '-', color=glob_style([1,0,0]), lw=0.9)
+ax[0].plot(x_av, raman(sol, x_av)+smoothing(r, K), '--', color=glob_style([1,0,0]), lw=0.9)
+
+### fig.savefig(f"./.data/{direct}/fit/average_{direct}_fit.pdf")
+## %%
+# Visual of spectrum components
+fig, ax = plt.subplots(figsize=(10, 10))
+ax.set_title(f"Spectral components for average model")
+ax.set_xlim([min(x_av), max(x_av)])
+ax.set_ylim([0, max(y)*1.25])
+ax.plot(x_av, y, '.', ms=2, color=glob_style([0,0,0]))
+ax.plot(x_av, raman(sol, x_av), '-', lw=0.7, color=glob_style([1,0,0]))
+for n in range(0, len(sol)-1, 3):
+    ax.plot(x_av, lorentz(sol[n:n+3], x_av), lw=0.7, color=glob_style([0,0,0,0.3]))
+    if 500 < sol[n:n+3][2] < 3000:
+        if 0 < abs(sol[n:n+3][0]) < 14000:
+            ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2, color=glob_style([1,0,0]))
+            ax.text(sol[n:n+3][2], abs(sol[n:n+3][0]), f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][0]),1))}")
+        else:
+            ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2, color=glob_style([1,0,0]))
+            ax.text(sol[n:n+3][2], 14000, f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][0]),1))}")
+### fig.savefig(f"./.data/{direct}/comp/average_{direct}_comp.pdf")
 
 # %%
 # Active vs overall surface
@@ -135,7 +184,7 @@ while True:
             return np.array(data)
         return DENS
 
-    sgm = 0.1
+    sgm = 0.5
     density = set_density(surface, active, sgm, sgm)
 
     def density_estimator(u):
@@ -172,13 +221,14 @@ while True:
 
     ## %%
     # Only those which meet the requirement of Z >= 0.05
-    sol = list(sol)
+    new_req = []
     for n in range(len(requirement)):
+        for k in range(3):
+            new_req += [requirement[n]]
         if not requirement[n]:
             print(f"Trimmed: index {n}")
-            #   popping three n-th elements in a row (removing A, hmhw, x0)
-            for i in range(3):
-                sol.pop(n)
+    new_req = np.array(new_req)
+    sol = sol[new_req]
     # fig.savefig(f"./.data/{direct}/selector/average_selector_{direct}_{ix}.pdf")
     if False not in requirement:
         print("No trimming")
@@ -350,18 +400,19 @@ for dset in tbl.keys():
 
         ## %%
         # Only those which meet the requirement of Z >= 0.05
-        sol = list(sol)
+        new_req = []
         for n in range(len(requirement)):
+            for k in range(3):
+                new_req += [requirement[n]]
             if not requirement[n]:
                 print(f"Trimmed: index {n}")
-                #   popping three n-th elements in a row (removing A, hmhw, x0)
-                for i in range(3):
-                    sol.pop(n)
-        # fig.savefig(f"./.data/{direct}/selector/{dset}_selector_{direct}_{ix}.pdf")
-        ix += 1
-        if False not in requirement and r.dot(r)/(y.dot(y)) < 0.01 :
+        new_req = np.array(new_req)
+        sol = sol[new_req]
+        # fig.savefig(f"./.data/{direct}/selector/average_selector_{direct}_{ix}.pdf")
+        if False not in requirement:
             print("No trimming")
             break
+        ix += 1
     # setting number of curves 
     # if initial:
     #     solutions += [sol]
