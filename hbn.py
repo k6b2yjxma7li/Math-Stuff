@@ -23,8 +23,9 @@ def percentage(u, v):
     dig = int(abs(np.log(val)))
     return f"{round(val, dig)}%"
 
+gav = smoothing
 
-# %%
+## %%
 # Data loading and preparations
 direct = "VH"
 measure = "polar_hbn"
@@ -56,28 +57,26 @@ y_av /= ctr
 y_stdev /= ctr
 y_stdev = (y_stdev - y_av**2)**0.5
 x_av /= ctr
-## %%
-sol = []
+# %%
+# Main resgd fitter
+# for M in [10, 20, 30, 50, 75, 100, 150, 200, 250]:
+# print(f"M = {M}")
 raman = spectrum(lorentz, 3)
 dif = residual(raman, x_av, y_av)
 ressq = residual(raman, x_av, y_av, 1/y_av**0.5)
 res = residual(raman, x_av, y_av, y_stdev)
+sol = []
 M = 50
-# scale = 1
 
 y = y_av
 curve_count = 15
 initial = True
 solutions = []
 
-#
 r = dif([0, 1, 1])
 
-# %%
-# Main resgd fitter
-
 while len(sol)/3 < curve_count:
-    gd = gdev(r, M)
+    gd = (gdev(r, M)**2 + gav(r, M)**2)**0.5  # V2
     resgd = residual(raman, x_av, y, 1/gd)
     p = xpeak(x_av, gd, max(gd), max(gd)/2)
     hmhw = abs(x_av[p[0]] - x_av[p[-1]])/2

@@ -4,8 +4,12 @@ import os
 import re
 import warnings
 
+import plotly.express as pex
+import plotly.graph_objects as pgo
+import plotly.subplots as psp
+
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
+# from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
 import numpy as np
 from scipy.optimize import leastsq
 
@@ -20,11 +24,14 @@ plt.style.use('dark_background')
 
 def percentage(u, v):
     val = 100*u/v
-    dig = int(abs(np.log(val)))
+    dig = int(abs(np.log10(val)-3))
+    # print(dig)
     return f"{round(val, dig)}%"
 
+gav = smoothing
 
-# %%
+
+## %%
 # Data loading and preparations
 direct = "VH"
 measure = "polar_grf"
@@ -56,93 +63,41 @@ y_av /= ctr
 y_stdev /= ctr
 y_stdev = (y_stdev - y_av**2)**0.5
 x_av /= ctr
-## %%
-sol = []
+# %%
+# Main resgd fitter
+# for M in [10, 20, 30, 50, 75, 100, 150, 200, 250]:
+# print(f"M = {M}")
 raman = spectrum(lorentz, 3)
 dif = residual(raman, x_av, y_av)
 ressq = residual(raman, x_av, y_av, 1/y_av**0.5)
 res = residual(raman, x_av, y_av, y_stdev)
-M = 20
-# scale = 1
+sol = []
+M = 10
 
 y = y_av
-curve_count = 15
+curve_count = 20
 initial = True
 solutions = []
 
-#
 r = dif([0, 1, 1])
 
-# %%
-# Main resgd fitter
-
-# while len(sol)/3 < curve_count:
-gd = gdev(r, M)+gdev(r, 1000)
-resgd = residual(raman, x_av, y, 1/gd)
-p = xpeak(x_av, gd, max(gd), max(gd)/2)
-hmhw = abs(x_av[p[0]] - x_av[p[-1]])/2
-Amp = r[p[1]]
-x0 = (x_av[p[0]]+x_av[p[-1]])/2
-v = [abs(Amp), hmhw, x0]
-sol = list(sol)
-sol += [Amp, hmhw, x0]
-# if len(sol)/3 % 3 == 0 or curve_count - len(sol)/3 < 3:
-sol, h = leastsq(resgd, sol)
-r = dif(sol)
-# print(f"{int(len(sol)/3)}: {r.dot(r)}")
-# print(f"{int(len(sol)/3)}: {percentage(r.dot(r), y.dot(y))}")
+while len(sol)/3 < curve_count:
+    gd = (gdev(r, M)**2 + gav(r, M)**2)**0.5  # V2
+    resgd = residual(raman, x_av, y, 1/gd)
+    p = xpeak(x_av, gd, max(gd), max(gd)/2)
+    hmhw = abs(x_av[p[0]] - x_av[p[-1]])/2
+    Amp = r[p[1]]
+    x0 = (x_av[p[0]]+x_av[p[-1]])/2
+    v = [abs(Amp), hmhw, x0]
+    sol = list(sol)
+    sol += [Amp, hmhw, x0]
+    # if len(sol)/3 % 3 == 0 or curve_count - len(sol)/3 < 3:
+    sol, h = leastsq(resgd, sol)
+    r = dif(sol)
+    # print(f"{int(len(sol)/3)}: {r.dot(r)}")
+    print(f"{int(len(sol)/3)}: {percentage(r.dot(r), y.dot(y))}")
 
 sola = sol.copy()
-
-## %%
-# Main fitter plotter
-K = M
-# res = residual(raman, x_av, y, y_stdev)
-r = dif(sol)
-fig, ax = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(10, 10))
-ax[0].set_title(f"Average data with stddev")
-ax[1].set_title("Residual with average and deviations")
-ax[0].plot(x_av, y, '.', ms=0.7, lw=0.7, color=glob_style([0,0,0]))
-ax[0].plot(x_av, y_stdev, '.', ms=0.7, lw=0.7, color=glob_style([0,0,1]))
-
-ax1 = plt.twinx(ax[0])
-# ax1.set_ylim([0, 2400])
-
-ax[1].plot(x_av, r, '.', lw=0.7, ms=0.8, color=glob_style([0,0,0]))
-
-ax2 = plt.twinx(ax[1])
-# ax2.set_ylim([0, 2400])
-ax2.plot(x_av, gdev(r, M), '-', lw=0.7, ms=0.7, color=glob_style([0,0,0]))
-ax2.plot(x_av, np.linspace(np.std(r), np.std(r), len(x_av)), '--', lw=0.7, ms=0.7, color=glob_style([0,0,1]))
-
-ax[1].plot(x_av, np.linspace(np.mean(r), np.mean(r), len(x_av)), '-.', lw=0.7, ms=0.7, color=glob_style([0,0,1]))
-ax[1].plot(x_av, smoothing(r, K), '--', lw=0.7, ms=0.7, color=glob_style([0,0,0]))
-
-ax1.plot(x_av, gdev(r, M), '-', lw=0.7, ms=0.7, color=glob_style([0,0,0]))
-
-ax[0].plot(x_av, lorentz(v, x_av), '-', color=glob_style([0,0,0,0.3]), lw=0.9, ms=0.9)
-ax[0].plot(x_av, raman(sol, x_av), '-', color=glob_style([1,0,0]), lw=0.9)
-ax[0].plot(x_av, raman(sol, x_av)+smoothing(r, K), '--', color=glob_style([1,0,0]), lw=0.9)
-
-### fig.savefig(f"./.data/{direct}/fit/average_{direct}_fit.pdf")
-## %%
-# Visual of spectrum components
-fig, ax = plt.subplots(figsize=(10, 10))
-ax.set_title(f"Spectral components for average model")
-ax.set_xlim([min(x_av), max(x_av)])
-ax.set_ylim([0, max(y)*1.25])
-ax.plot(x_av, y, '.', ms=2, color=glob_style([0,0,0]))
-ax.plot(x_av, raman(sol, x_av), '-', lw=0.7, color=glob_style([1,0,0]))
-for n in range(0, len(sol)-1, 3):
-    ax.plot(x_av, lorentz(sol[n:n+3], x_av), lw=0.7, color=glob_style([0,0,0,0.3]))
-    if 500 < sol[n:n+3][2] < 3000:
-        if 0 < abs(sol[n:n+3][0]) < 14000:
-            ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2, color=glob_style([1,0,0]))
-            ax.text(sol[n:n+3][2], abs(sol[n:n+3][0]), f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][0]),1))}")
-        else:
-            ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2, color=glob_style([1,0,0]))
-            ax.text(sol[n:n+3][2], 14000, f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][0]),1))}")
-### fig.savefig(f"./.data/{direct}/comp/average_{direct}_comp.pdf")
 
 # %%
 # Active vs overall surface
@@ -479,5 +434,126 @@ for nr, s in enumerate(solutions):
     x0s = next(nearest_val(s[np.arange(0, len(s), 1) % 3 == 2], 1367))
     plt.polar(np.pi*nr/18, s[x0s*3], '.', color=[1,1,1], ms=0.7)
 
+
+# %%
+# %%
+fig = pex.scatter()
+fig.layout.template = 'plotly_dark'
+gd = gdev(y_av, 10000)
+traces = [
+    {
+        'x': x_av,
+        'y': residual(raman, x_av, y, 1/gd)(sol),
+        'name': 'Res1 (penalty 1/gd)',
+        'mode': 'markers',
+        'marker': {'size': 2},
+        'yaxis': 'y1'
+    },
+    {
+        'x': x_av,
+        'y': residual(raman, x_av, y, gd)(sol),
+        'name': 'Res2 (penalty gd)',
+        'mode': 'markers',
+        'marker': {'size': 2},
+        'yaxis': 'y2'
+    }]
+layout = {
+    'yaxis2': {
+        'overlaying': 'y',
+        'side': 'right'
+    }
+}
+fig.add_traces(traces)
+fig.update_layout(layout)
+fig.show()
+
+# %%
+fig = pex.scatter()
+fig.layout.template = 'plotly_dark'
+gd = gdev(y_av, 10000)
+traces = [
+    {
+        'x': x_av,
+        'y': y_av,
+        'name': 'Data',
+        'mode': 'markers',
+        'marker': {'size': 2},
+        'yaxis': 'y1'
+    },
+    {
+        'x': x_av,
+        'y': raman(sol, x_av),
+        'name': 'Fit',
+        'mode': 'lines',
+        'line': {'width': 1}
+    }
+]
+layout = {
+    'yaxis2': {
+        'overlaying': 'y',
+        'side': 'right'
+    }
+}
+fig.add_traces(traces)
+fig.update_layout(layout)
+fig.show()
+
+
+# %%
+fig = pex.scatter_3d()
+
+fig.layout.template = 'plotly_dark'
+
+# splitting main vector into sub curves
+
+x_coeff = []
+y_coeff = []
+z_coeff = []
+labels = []
+
+for n in range(0, len(sol)-1, 3):
+    A, b, x0 = sol[n:n+3]
+    x_coeff += [abs(A)]
+    y_coeff += [abs(b)]
+    z_coeff += [x0 - np.mean(x_av)]
+    labels += [f'{int(n/3)}']
+
+
+traces = [
+    {
+        'type': 'scatter3d',
+        'x': x_coeff,
+        'y': y_coeff,
+        'z': z_coeff,
+        'mode': 'markers',
+        'text': labels,
+        'marker': {'size': 2}
+    }
+]
+
+layout = {
+    'scene': {
+        'xaxis': {
+            'title': 'x: Amplitude'
+        },
+        'yaxis': {
+            'title': 'y: hmhw'
+        },
+        'zaxis': {
+            'title': 'z: x0'
+        }
+    },
+    'margin': {
+        't': 25,
+        'b': 5,
+        'l': 5,
+        'r': 5
+    }
+}
+
+fig.add_traces(traces)
+fig.update_layout(layout)
+
+fig.show()
 
 # %%
