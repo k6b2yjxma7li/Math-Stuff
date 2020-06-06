@@ -30,12 +30,50 @@ def percentage(u, v):
 
 gav = smoothing
 
+# %%
+# Configuration
+config = {
+    'hbn': {
+        'init': 7,
+        'count': 20,
+        'day': '190725',
+        'measure': 'polar_hbn',
+        # 'direct': 'VH',
+        'M': {
+            'init': 500,
+            'final': 15
+        },
+        'solutions': {
+            'VH': [],
+            'VV': []
+        }
+    },
+    'grf': {
+        'init': 5,
+        'count': 15,
+        'day': '190726',
+        'measure': 'polar_grf',
+        # 'direct': 'VH',
+        'M': {
+            'init': 500,
+            'final': 20
+        },
+        'solutions': {
+            'VH': [],
+            'VV': []
+        }
+    },
+    'figsave': False
+}
 
-## %%
+# %%
 # Data loading and preparations
-direct = "VH"
-measure = "polar_grf"
-day = "190726"
+material = 'hbn'
+direct = 'VH'
+
+measure = config[material]['measure']
+day = config[material]['day']
+
 path = f"./.data/Praca_inzynierska/Badania/{day}/{measure}/{direct}"
 tdict = {}  # translation dict for accessing tables columns by integer
 tbl = table()
@@ -72,17 +110,17 @@ dif = residual(raman, x_av, y_av)
 ressq = residual(raman, x_av, y_av, 1/y_av**0.5)
 res = residual(raman, x_av, y_av, y_stdev)
 sol = []
-M = 10
 
 y = y_av
-curve_count = 20
 initial = True
-solutions = []
+
 
 r = dif([0, 1, 1])
 
-while len(sol)/3 < curve_count:
-    gd = (gdev(r, M)**2 + gav(r, M)**2)**0.5  # V2
+M = config[material]['M']['init']
+while len(sol)/3 < config[material]['init']:
+    gd = (gdev(r, M)**2 + gav(r, M)**2)  # V2
+    # resgd = lambda s: residual(raman, x_av, y, 1/gd)(s)*np.array(s).dot(np.array(s))
     resgd = residual(raman, x_av, y, 1/gd)
     p = xpeak(x_av, gd, max(gd), max(gd)/2)
     hmhw = abs(x_av[p[0]] - x_av[p[-1]])/2
@@ -92,7 +130,25 @@ while len(sol)/3 < curve_count:
     sol = list(sol)
     sol += [Amp, hmhw, x0]
     # if len(sol)/3 % 3 == 0 or curve_count - len(sol)/3 < 3:
-    sol, h = leastsq(resgd, sol)
+    sol, h = leastsq(dif, sol)
+    r = dif(sol)
+    # print(f"{int(len(sol)/3)}: {r.dot(r)}")
+    print(f"{int(len(sol)/3)}: {percentage(r.dot(r), y.dot(y))}")
+
+M = config[material]['M']['final']
+while len(sol)/3 < config[material]['count']:
+    gd = (gdev(r, M)**2 + gav(r, M)**2)  # V2
+    # resgd = lambda s: residual(raman, x_av, y, 1/gd)(s)*np.array(s).dot(np.array(s))
+    resgd = residual(raman, x_av, y, 1/gd)
+    p = xpeak(x_av, gd, max(gd), max(gd)/2)
+    hmhw = abs(x_av[p[0]] - x_av[p[-1]])/2
+    Amp = r[p[1]]
+    x0 = (x_av[p[0]]+x_av[p[-1]])/2
+    v = [abs(Amp), hmhw, x0]
+    sol = list(sol)
+    sol += [Amp, hmhw, x0]
+    # if len(sol)/3 % 3 == 0 or curve_count - len(sol)/3 < 3:
+    sol, h = leastsq(dif, sol)
     r = dif(sol)
     # print(f"{int(len(sol)/3)}: {r.dot(r)}")
     print(f"{int(len(sol)/3)}: {percentage(r.dot(r), y.dot(y))}")
@@ -241,10 +297,10 @@ for n in range(0, len(sol)-1, 3):
     if 500 < sol[n:n+3][2] < 3000:
         if 0 < abs(sol[n:n+3][0]) < 14000:
             ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2, color=glob_style([1,0,0]))
-            ax.text(sol[n:n+3][2], abs(sol[n:n+3][0]), f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][0]),1))}")
+            ax.text(sol[n:n+3][2], abs(sol[n:n+3][0]), f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][2]),1))}")
         else:
             ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2, color=glob_style([1,0,0]))
-            ax.text(sol[n:n+3][2], 14000, f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][0]),1))}")
+            ax.text(sol[n:n+3][2], 14000, f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][2]),1))}")
 # fig.savefig(f"./.data/{direct}/comp/average_{direct}_comp.pdf")
 
 # %%
@@ -255,28 +311,48 @@ for dset in tbl.keys():
     # fig, ax = plt.subplots(nrows=2, figsize=(10, 10))
     # dset = '#0' its the same '000'
     y = np.array(tbl[dset]['#Intensity'])
-    sol, h = leastsq(residual(raman, x_av, y, y**0.5), sola)
+    sol, h = leastsq(residual(raman, x_av, y), sola)
     dif = residual(raman, x_av, y)
     print(f"For {dset} deg.: {dif(sol).dot(dif(sol))}")
 
     ix = 0
     ## %%
     # Main resgd fitter
-    while True:
+    M = config[material]['M']['init']
+    while len(sol)/3 < config[material]['init']:
+        gd = (gdev(r, M)**2 + gav(r, M)**2)  # V2
+        # resgd = lambda s: residual(raman, x_av, y, 1/gd)(s)*np.array(s).dot(np.array(s))
+        resgd = residual(raman, x_av, y, 1/gd)
+        p = xpeak(x_av, gd, max(gd), max(gd)/2)
+        hmhw = abs(x_av[p[0]] - x_av[p[-1]])/2
+        Amp = r[p[1]]
+        x0 = (x_av[p[0]]+x_av[p[-1]])/2
+        v = [abs(Amp), hmhw, x0]
+        sol = list(sol)
+        sol += [Amp, hmhw, x0]
+        # if len(sol)/3 % 3 == 0 or curve_count - len(sol)/3 < 3:
+        sol, h = leastsq(dif, sol)
         r = dif(sol)
-        while len(sol)/3 < curve_count:
-            gd = gdev(r, M)
-            resgd = residual(raman, x_av, y, 1/gd)
-            p = xpeak(x_av, gd, max(gd), max(gd)/2)
-            hmhw = abs(x_av[p[0]] - x_av[p[-1]])/2
-            Amp = r[p[1]]
-            x0 = (x_av[p[0]]+x_av[p[-1]])/2
-            v = [abs(Amp), hmhw, x0]
-            sol = list(sol)
-            sol += [Amp, hmhw, x0]
-            sol, h = leastsq(resgd, sol)
-            r = dif(sol)
-            print(f"{int(len(sol)/3)}: {percentage(r.dot(r), y.dot(y))}")
+        # print(f"{int(len(sol)/3)}: {r.dot(r)}")
+        print(f"{int(len(sol)/3)}: {percentage(r.dot(r), y.dot(y))}")
+
+    M = config[material]['M']['final']
+    while len(sol)/3 < config[material]['count']:
+        gd = (gdev(r, M)**2 + gav(r, M)**2)  # V2
+        # resgd = lambda s: residual(raman, x_av, y, 1/gd)(s)*np.array(s).dot(np.array(s))
+        resgd = residual(raman, x_av, y, 1/gd)
+        p = xpeak(x_av, gd, max(gd), max(gd)/2)
+        hmhw = abs(x_av[p[0]] - x_av[p[-1]])/2
+        Amp = r[p[1]]
+        x0 = (x_av[p[0]]+x_av[p[-1]])/2
+        v = [abs(Amp), hmhw, x0]
+        sol = list(sol)
+        sol += [Amp, hmhw, x0]
+        # if len(sol)/3 % 3 == 0 or curve_count - len(sol)/3 < 3:
+        sol, h = leastsq(dif, sol)
+        r = dif(sol)
+        # print(f"{int(len(sol)/3)}: {r.dot(r)}")
+        print(f"{int(len(sol)/3)}: {percentage(r.dot(r), y.dot(y))}")
 
 
         ## %%
@@ -374,11 +450,11 @@ for dset in tbl.keys():
     #     sola = sol
     #     curve_count = int(len(sol)/3)
     #     initial = False
-    solutions += [sol]
+    config[material]['solutions'][direct].append(sol)
 
     ## %%
     # Main fitter plotter
-    K = 50
+    K = M
     res = residual(raman, x_av, y, y_stdev)
     r = dif(sol)
     fig, ax = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(10, 10))
@@ -406,7 +482,7 @@ for dset in tbl.keys():
     ax[0].plot(x_av, raman(sol, x_av), '-', color=glob_style([1,0,0]), lw=0.9)
     ax[0].plot(x_av, raman(sol, x_av)+smoothing(r, K), '--', color=glob_style([1,0,0]), lw=0.9)
 
-    # fig.savefig(f"./.data/{direct}/fit/{dset}_{direct}_fit.pdf")
+    fig.savefig(f"./.data/{direct}/fit/{dset}_{direct}_fit.pdf")
     ## %%
     # Visual of spectrum components
     fig, ax = plt.subplots(figsize=(10, 10))
@@ -420,30 +496,71 @@ for dset in tbl.keys():
         if 500 < sol[n:n+3][2] < 3000:
             if 0 < abs(sol[n:n+3][0]) < 14000:
                 ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2, color=glob_style([1,0,0]))
-                ax.text(sol[n:n+3][2], abs(sol[n:n+3][0]), f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][0]),1))}")
+                ax.text(sol[n:n+3][2], abs(sol[n:n+3][0]), f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][2]),1))}")
             else:
                 ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2, color=glob_style([1,0,0]))
-                ax.text(sol[n:n+3][2], 14000, f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][0]),1))}")
+                ax.text(sol[n:n+3][2], 14000, f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][2]),1))}")
     # fig.savefig(f"./.data/{direct}/comp/{dset}_{direct}_comp.pdf")
+    plt.show()
 # %%
 # Radial for chosen peak
 # fig, ax = plt.subplots(figsize=(10, 10))
-fig = plt.figure(figsize=(10, 10))
-for nr, s in enumerate(solutions):
-    s = np.array(s)
-    x0s = next(nearest_val(s[np.arange(0, len(s), 1) % 3 == 2], 1367))
-    plt.polar(np.pi*nr/18, s[x0s*3], '.', color=[1,1,1], ms=0.7)
 
+# sols = solutions[:]
+
+sols = config[material]['solutions']['VH']
+
+fig = plt.figure(figsize=(20, 20))
+ax1 = fig.add_subplot(221)
+ax1.set_title('Curves of choice')
+ax2 = fig.add_subplot(222)
+ax2.set_title('Peak position')
+ax3 = fig.add_subplot(223)
+ax3.set_title('FWHM')
+ax4 = fig.add_subplot(224, projection='polar')
+ax4.set_title('Amplitude')
+# ax = fig.add_subplot(121, projection='polar')
+# ax1.set_title('Curves of choice')
+# fig1 = plt.figure(figsize=(10, 10))
+max_y = 0
+fltr = 2
+comp = 2
+exclusion = np.array(np.linspace(0, 0, len(sols)), dtype=bool)
+addressing = np.array(np.linspace(-1, -1, len(sols)), dtype=int)
+# exclusion[21] = True
+for nr, s in enumerate(sols):
+    if not exclusion[nr]:
+        s = np.array(s)
+        ix = next(nearest_val(s[np.arange(0, len(s), 1) % 3 == fltr], 970))
+        if addressing[nr] != -1:
+            ix = addressing[nr]
+        # print(ix)
+        # curr_peak = abs(s[0+3*ix])*abs(s[1+3*ix])
+        ax1.plot(x_av, lorentz(s[3*ix:3*ix+3], x_av), '-', lw=0.7)
+        ax1.text(x_av[-1], lorentz(s[3*ix:3*ix+3], x_av[-1]), f"{nr}/{ix}")
+        pos = abs(s[2+3*ix])
+        hmhw = abs(s[1+3*ix])
+        # amp = abs(s[0+3*ix])*hmhw
+        amp = abs(s[0+3*ix])
+        ax2.plot(nr*10, pos, '.', color=[0,1,1], ms=5)
+        ax3.plot(nr*10, hmhw, '.', color=[0,1,1], ms=5)
+        ax4.plot(np.pi*nr/18, amp, '.', color=[0,1,1], ms=5)
+        
+        # ax1.text(s[2+3*ix], lorentz(s[3*ix:3*ix+3], s[2+3*ix]), f"{nr}/{ix}")
+        if amp > max_y:
+            max_y = amp*1.1
+ax4.set_ylim([0, max_y])
+# ax.set_ylim([0, 2000])
 
 # %%
 # %%
 fig = pex.scatter()
 fig.layout.template = 'plotly_dark'
-gd = gdev(y_av, 10000)
+gd = (gdev(r, M)**2 + gav(r, M)**2)  # V2
 traces = [
     {
         'x': x_av,
-        'y': residual(raman, x_av, y, 1/gd)(sol),
+        'y': residual(raman, x_av, y_av, 1/gd)(sola),
         'name': 'Res1 (penalty 1/gd)',
         'mode': 'markers',
         'marker': {'size': 2},
@@ -451,16 +568,20 @@ traces = [
     },
     {
         'x': x_av,
-        'y': residual(raman, x_av, y, gd)(sol),
+        'y': residual(raman, x_av, y_av, gd)(sola),
         'name': 'Res2 (penalty gd)',
         'mode': 'markers',
         'marker': {'size': 2},
         'yaxis': 'y2'
     }]
 layout = {
+    'yaxis1': {
+        'color': '#5577ff'
+    },
     'yaxis2': {
         'overlaying': 'y',
-        'side': 'right'
+        'side': 'right',
+        'color': '#ff7755'
     }
 }
 fig.add_traces(traces)
@@ -482,7 +603,7 @@ traces = [
     },
     {
         'x': x_av,
-        'y': raman(sol, x_av),
+        'y': raman(sola, x_av),
         'name': 'Fit',
         'mode': 'lines',
         'line': {'width': 1}

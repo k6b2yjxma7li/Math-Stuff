@@ -25,9 +25,9 @@ def percentage(u, v):
 
 gav = smoothing
 
-## %%
+# %%
 # Data loading and preparations
-direct = "VH"
+direct = "VV"
 measure = "polar_hbn"
 day = "190725"
 path = f"./.data/Praca_inzynierska/Badania/{day}/{measure}/{direct}"
@@ -66,17 +66,18 @@ dif = residual(raman, x_av, y_av)
 ressq = residual(raman, x_av, y_av, 1/y_av**0.5)
 res = residual(raman, x_av, y_av, y_stdev)
 sol = []
-M = 50
+# M = 50 for gdev(r, M)
+M = 70
 
 y = y_av
-curve_count = 15
+curve_count = 20
 initial = True
 solutions = []
 
 r = dif([0, 1, 1])
 
 while len(sol)/3 < curve_count:
-    gd = (gdev(r, M)**2 + gav(r, M)**2)**0.5  # V2
+    gd = (gdev(r, M)**2 + gav(r, M)**2)  # V2
     resgd = residual(raman, x_av, y, 1/gd)
     p = xpeak(x_av, gd, max(gd), max(gd)/2)
     hmhw = abs(x_av[p[0]] - x_av[p[-1]])/2
@@ -179,18 +180,10 @@ while True:
             print(f"Trimmed: index {n}")
     new_req = np.array(new_req)
     sol = sol[new_req]
-    # fig.savefig(f"./.data/{direct}/selector/average_selector_{direct}_{ix}.pdf")
     if False not in requirement:
         print("No trimming")
         break
     ix += 1
-# setting number of curves 
-# if initial:
-#     solutions += [sol]
-#     sola = sol
-#     curve_count = int(len(sol)/3)
-#     initial = False
-# sola = sol
 
 # %%
 # Main fitter plotter
@@ -204,7 +197,7 @@ ax[0].plot(x_av, y, '.', ms=0.7, lw=0.7, color=glob_style([0,0,0]))
 ax[0].plot(x_av, y_stdev, '.', ms=0.7, lw=0.7, color=glob_style([0,0,1]))
 
 ax1 = plt.twinx(ax[0])
-ax1.set_ylim([0, 1200])
+# ax1.set_ylim([0, 1200])
 
 ax[1].plot(x_av, r, '.', lw=0.7, ms=0.8, color=glob_style([0,0,0]))
 
@@ -216,13 +209,12 @@ ax2.plot(x_av, np.linspace(np.std(r), np.std(r), len(x_av)), '--', lw=0.7, ms=0.
 ax[1].plot(x_av, np.linspace(np.mean(r), np.mean(r), len(x_av)), '-.', lw=0.7, ms=0.7, color=glob_style([0,0,1]))
 ax[1].plot(x_av, smoothing(r, K), '--', lw=0.7, ms=0.7, color=glob_style([0,0,0]))
 
-ax1.plot(x_av, gdev(r, K), '-', lw=0.7, ms=0.7, color=glob_style([0,0,0]))
+ax1.plot(x_av, (gdev(r, M)**2 + gav(r, M)**2)**0.5, '-', lw=0.7, ms=0.7, color=glob_style([0,0,0]))
 
 ax[0].plot(x_av, lorentz(v, x_av), '-', color=glob_style([0,0,0,0.3]), lw=0.9, ms=0.9)
 ax[0].plot(x_av, raman(sol, x_av), '-', color=glob_style([1,0,0]), lw=0.9)
 ax[0].plot(x_av, raman(sol, x_av)+smoothing(r, K), '--', color=glob_style([1,0,0]), lw=0.9)
 
-# fig.savefig(f"./.data/{direct}/fit/average_{direct}_fit.pdf")
 ## %%
 # Visual of spectrum components
 fig, ax = plt.subplots(figsize=(10, 10))
@@ -240,7 +232,6 @@ for n in range(0, len(sol)-1, 3):
         else:
             ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2, color=glob_style([1,0,0]))
             ax.text(sol[n:n+3][2], 14000, f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][0]),1))}")
-# fig.savefig(f"./.data/{direct}/comp/average_{direct}_comp.pdf")
 
 # %%
 # Proper logic
@@ -260,7 +251,7 @@ for dset in tbl.keys():
     while True:
         r = dif(sol)
         while len(sol)/3 < curve_count:
-            gd = gdev(r, M)
+            gd = (gdev(r, M)**2 + gav(r, M)**2)  # V2
             resgd = residual(raman, x_av, y, 1/gd)
             p = xpeak(x_av, gd, max(gd), max(gd)/2)
             hmhw = abs(x_av[p[0]] - x_av[p[-1]])/2
@@ -358,17 +349,10 @@ for dset in tbl.keys():
                 print(f"Trimmed: index {n}")
         new_req = np.array(new_req)
         sol = sol[new_req]
-        # fig.savefig(f"./.data/{direct}/selector/average_selector_{direct}_{ix}.pdf")
         if False not in requirement:
             print("No trimming")
             break
         ix += 1
-    # setting number of curves 
-    # if initial:
-    #     solutions += [sol]
-    #     sola = sol
-    #     curve_count = int(len(sol)/3)
-    #     initial = False
     solutions += [sol]
 
     ## %%
@@ -401,7 +385,6 @@ for dset in tbl.keys():
     ax[0].plot(x_av, raman(sol, x_av), '-', color=glob_style([1,0,0]), lw=0.9)
     ax[0].plot(x_av, raman(sol, x_av)+smoothing(r, K), '--', color=glob_style([1,0,0]), lw=0.9)
 
-    # fig.savefig(f"./.data/{direct}/fit/{dset}_{direct}_fit.pdf")
     ## %%
     # Visual of spectrum components
     fig, ax = plt.subplots(figsize=(10, 10))
@@ -419,15 +402,36 @@ for dset in tbl.keys():
             else:
                 ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2, color=glob_style([1,0,0]))
                 ax.text(sol[n:n+3][2], 14000, f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][0]),1))}")
-    # fig.savefig(f"./.data/{direct}/comp/{dset}_{direct}_comp.pdf")
+    # plt.show()
 # %%
 # Radial for chosen peak
 # fig, ax = plt.subplots(figsize=(10, 10))
 fig = plt.figure(figsize=(10, 10))
+ax = fig.add_subplot(111, projection='polar')
+fig1 = plt.figure(figsize=(10, 10))
+ax1 = fig1.add_subplot(111)
+max_y = 0
+filter = 2
+comp = 0
+addressing = np.array(np.linspace(-1, -1, len(solutions)), dtype=int)
+# addressing[17] = 19
+# addressing[]
 for nr, s in enumerate(solutions):
     s = np.array(s)
-    x0s = next(nearest_val(s[np.arange(0, len(s), 1) % 3 == 2], 1367))
-    plt.polar(np.pi*nr/18, s[x0s*3], '.', color=[1,1,1], ms=0.7)
+    ix = next(nearest_val(s[np.arange(0, len(s), 1) % 3 == filter], 1367))
+    if addressing[nr] != -1:
+        ix = addressing[nr]
+    # print(ix)
+    # curr_peak = abs(s[0+3*ix])*abs(s[1+3*ix])
+    curr_peak = abs(s[comp+3*ix])
+    ax.plot(np.pi*nr/18, curr_peak, '.', color=[0,1,1], ms=5)
+    ax1.plot(x_av, lorentz(s[3*ix:3*ix+3], x_av), '-', lw=0.7)
+    ax1.text(x_av[-1], lorentz(s[3*ix:3*ix+3], x_av[-1]), f"{nr}/{ix}")
+    ax1.text(s[2+3*ix], lorentz(s[3*ix:3*ix+3], s[2+3*ix]), f"{nr}/{ix}")
+    if curr_peak > max_y:
+        max_y = curr_peak*1.5
+ax.set_ylim([0, max_y])
+# ax.set_ylim([1900, 1920])
 
 
 # %%
