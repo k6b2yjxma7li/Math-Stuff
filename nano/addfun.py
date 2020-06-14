@@ -200,9 +200,9 @@ def integr(y_arg, x_arg):
 
 def smoothen(u):
     """Single-iterational `smoothing` function"""
-    left = [(u[0] + u[1])/2]
+    left = [(5*u[0] + 11*u[1] + 7*u[2] + u[3])/24]
     center = list((u[:-2] + 2*u[1:-1] + u[2:])/4)
-    right = [(u[-2] + u[-1])/2]
+    right = [(u[-4] + 7*u[-3] + 11*u[-2] + 5*u[-1])/24]
     return np.array(left+center+right)
 
 

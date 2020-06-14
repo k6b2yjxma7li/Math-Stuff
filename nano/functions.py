@@ -154,8 +154,8 @@ def d(u):
     """
     u = np.array(u)
     center = list((u[2:]-u[:-2])/2)
-    left = [(u[1]-u[0])]
-    right = [(u[-1]-u[-2])]
+    left = [(-3*u[0] + 4*u[1] - u[2])/2]
+    right = [(3*u[-1] - 4*u[-2] + u[-3])/2]
     return np.array(left + center + right)
 
 
@@ -206,11 +206,11 @@ def smoothing(t=[], mod=1):
     """
     t = np.array(t)
 
-    def single_smoothing(f):
-        df = (f[:-2]+2*f[1:-1]+f[2:])/4
-        left = [(f[0]+f[1])/2]
-        right = [(f[-2]+f[-1])/2]
-        return np.append(left, np.append(df, right))
+    def single_smoothing(u):
+        left = [(5*u[0] + 11*u[1] + 7*u[2] + u[3])/24]
+        center = list((u[:-2] + 2*u[1:-1] + u[2:])/4)
+        right = [(u[-4] + 7*u[-3] + 11*u[-2] + 5*u[-1])/24]
+        return np.array(left+center+right)
 
     for n in range(mod):
         t = single_smoothing(t)

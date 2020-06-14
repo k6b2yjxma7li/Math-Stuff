@@ -34,16 +34,20 @@ gav = smoothing
 # Configuration
 config = {
     'hbn': {
-        'init': 7,
+        'init': 5,
         'count': 20,
         'day': '190725',
         'measure': 'polar_hbn',
         # 'direct': 'VH',
         'M': {
             'init': 500,
-            'final': 15
+            'final': 10
         },
         'solutions': {
+            'VH': [],
+            'VV': []
+        },
+        'average': {
             'VH': [],
             'VV': []
         }
@@ -61,6 +65,10 @@ config = {
         'solutions': {
             'VH': [],
             'VV': []
+        },
+        'average': {
+            'VH': [],
+            'VV': []
         }
     },
     'figsave': False
@@ -68,8 +76,8 @@ config = {
 
 # %%
 # Data loading and preparations
-material = 'hbn'
-direct = 'VH'
+material = 'grf'
+direct = 'VV'
 
 measure = config[material]['measure']
 day = config[material]['day']
@@ -153,7 +161,7 @@ while len(sol)/3 < config[material]['count']:
     # print(f"{int(len(sol)/3)}: {r.dot(r)}")
     print(f"{int(len(sol)/3)}: {percentage(r.dot(r), y.dot(y))}")
 
-sola = sol.copy()
+# config[material]['average'][direct] = sol.copy()
 
 # %%
 # Active vs overall surface
@@ -248,14 +256,17 @@ while True:
 # setting number of curves 
 # if initial:
 #     solutions += [sol]
-#     sola = sol
+#     config[material]['average'][direct] = sol
 #     curve_count = int(len(sol)/3)
 #     initial = False
-# sola = sol
+# config[material]['average'][direct] = sol
+
+config[material]['average'][direct] = sol.copy()
 
 # %%
 # Main fitter plotter
 K = M
+gd = (gdev(r, M)**2 + gav(r, M)**2)  # V2
 # res = residual(raman, x_av, y, y_stdev)
 r = dif(sol)
 fig, ax = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(10, 10))
@@ -265,7 +276,7 @@ ax[0].plot(x_av, y, '.', ms=0.7, lw=0.7, color=glob_style([0,0,0]))
 ax[0].plot(x_av, y_stdev, '.', ms=0.7, lw=0.7, color=glob_style([0,0,1]))
 
 ax1 = plt.twinx(ax[0])
-ax1.set_ylim([0, 1200])
+# ax1.set_ylim([0, 1200])
 
 ax[1].plot(x_av, r, '.', lw=0.7, ms=0.8, color=glob_style([0,0,0]))
 
@@ -277,7 +288,7 @@ ax2.plot(x_av, np.linspace(np.std(r), np.std(r), len(x_av)), '--', lw=0.7, ms=0.
 ax[1].plot(x_av, np.linspace(np.mean(r), np.mean(r), len(x_av)), '-.', lw=0.7, ms=0.7, color=glob_style([0,0,1]))
 ax[1].plot(x_av, smoothing(r, K), '--', lw=0.7, ms=0.7, color=glob_style([0,0,0]))
 
-ax1.plot(x_av, gdev(r, K), '-', lw=0.7, ms=0.7, color=glob_style([0,0,0]))
+ax1.plot(x_av, gd, '-', lw=0.7, ms=0.7, color=glob_style([0,0,0]))
 
 ax[0].plot(x_av, lorentz(v, x_av), '-', color=glob_style([0,0,0,0.3]), lw=0.9, ms=0.9)
 ax[0].plot(x_av, raman(sol, x_av), '-', color=glob_style([1,0,0]), lw=0.9)
@@ -311,7 +322,7 @@ for dset in tbl.keys():
     # fig, ax = plt.subplots(nrows=2, figsize=(10, 10))
     # dset = '#0' its the same '000'
     y = np.array(tbl[dset]['#Intensity'])
-    sol, h = leastsq(residual(raman, x_av, y), sola)
+    sol, h = leastsq(residual(raman, x_av, y), config[material]['average'][direct])
     dif = residual(raman, x_av, y)
     print(f"For {dset} deg.: {dif(sol).dot(dif(sol))}")
 
@@ -447,7 +458,7 @@ for dset in tbl.keys():
     # setting number of curves 
     # if initial:
     #     solutions += [sol]
-    #     sola = sol
+    #     config[material]['average'][direct] = sol
     #     curve_count = int(len(sol)/3)
     #     initial = False
     config[material]['solutions'][direct].append(sol)
@@ -531,7 +542,7 @@ addressing = np.array(np.linspace(-1, -1, len(sols)), dtype=int)
 for nr, s in enumerate(sols):
     if not exclusion[nr]:
         s = np.array(s)
-        ix = next(nearest_val(s[np.arange(0, len(s), 1) % 3 == fltr], 970))
+        ix = next(nearest_val(s[np.arange(0, len(s), 1) % 3 == fltr], 1367))
         if addressing[nr] != -1:
             ix = addressing[nr]
         # print(ix)
@@ -560,7 +571,7 @@ gd = (gdev(r, M)**2 + gav(r, M)**2)  # V2
 traces = [
     {
         'x': x_av,
-        'y': residual(raman, x_av, y_av, 1/gd)(sola),
+        'y': residual(raman, x_av, y_av, 1/gd)(config[material]['average'][direct]),
         'name': 'Res1 (penalty 1/gd)',
         'mode': 'markers',
         'marker': {'size': 2},
@@ -568,7 +579,7 @@ traces = [
     },
     {
         'x': x_av,
-        'y': residual(raman, x_av, y_av, gd)(sola),
+        'y': residual(raman, x_av, y_av, gd)(config[material]['average'][direct]),
         'name': 'Res2 (penalty gd)',
         'mode': 'markers',
         'marker': {'size': 2},
@@ -603,7 +614,7 @@ traces = [
     },
     {
         'x': x_av,
-        'y': raman(sola, x_av),
+        'y': raman(config[material]['average'][direct], x_av),
         'name': 'Fit',
         'mode': 'lines',
         'line': {'width': 1}
