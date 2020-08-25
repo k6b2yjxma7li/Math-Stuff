@@ -79,7 +79,7 @@ config = {
 # %%
 # Data loading and preparations
 material = 'grf'
-direct = 'VV'
+direct = 'VH'
 
 measure = config[material]['measure']
 day = config[material]['day']
@@ -279,60 +279,310 @@ K = M
 gd = (gdev(r, M)**2 + gav(r, M)**2)  # V2
 # res = residual(raman, x_av, y, y_stdev)
 r = dif(sol)
-fig, ax = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(10, 10))
-ax[0].set_title(f"Average data with stddev")
-ax[1].set_title("Residual with average and deviations")
-ax[0].plot(x_av, y, '.', ms=0.7, lw=0.7, color=glob_style([0, 0, 0]))
-ax[0].plot(x_av, y_stdev, '.', ms=0.7, lw=0.7, color=glob_style([0, 0, 1]))
 
-ax1 = plt.twinx(ax[0])
-# ax1.set_ylim([0, 1200])
+plotly_global = 'plotly_dark'
+fig = psp.make_subplots(rows=2, cols=1, shared_xaxes=True,
+                        specs=[[{'secondary_y': True}],
+                                [{'secondary_y': False}]])
+fig.layout.template = plotly_global
 
-ax[1].plot(x_av, r, '.', lw=0.7, ms=0.8, color=glob_style([0, 0, 0]))
+traces1 = [
+    {
+        'type': 'scatter',
+        'mode': 'markers',
+        'name': 'data average',
+        'marker': {
+            'size': 2,
+            'color': 'white'
+        },
+        'x': x_av,
+        'y': y
+    },
+    {
+        'type': 'scatter',
+        'mode': 'lines',
+        'name': 'data average',
+        'line': {
+            'width': 1,
+            'color': 'cyan'
+        },
+        'x': x_av,
+        'y': raman(sol, x_av)
+    },
+    {
+        'type': 'scatter',
+        'mode': 'markers',
+        'name': 'data stdev',
+        'marker': {
+            'size': 1,
+            'color': 'yellow'
+        },
+        'x': x_av,
+        'y': y_stdev
+    },
+    {
+        'type': 'scatter',
+        'mode': 'lines',
+        'name': 'penalty',
+        'line': {
+            'width': 0.1,
+            'color': 'white',
+            # 'dash': 'dash'
+        },
+        'yaxis': 'y2',
+        'x': x_av,
+        'y': 1/gd
+    }
+]
 
-ax2 = plt.twinx(ax[1])
-ax2.set_ylim([0, 1200])
-ax2.plot(x_av, gdev(r, K), '-', lw=0.7, ms=0.7, color=glob_style([0, 0, 0]))
-ax2.plot(x_av, np.linspace(np.std(r), np.std(r), len(x_av)), '--', lw=0.7,
-         ms=0.7, color=glob_style([0, 0, 1]))
+traces2 = [
+    {
+        'type': 'scatter',
+        'mode': 'markers',
+        'name': 'residuals',
+        'marker': {
+            'size': 1,
+            'color': 'white'
+        },
+        'x': x_av,
+        'y': r
+    },
+    {
+        'type': 'scatter',
+        'mode': 'lines',
+        'name': 'residual average (full)',
+        'line': {
+            'width': 1,
+            'color': 'white'
+        },
+        'x': x_av,
+        'y': np.linspace(np.mean(r), np.mean(r), len(x_av))
+    },
+    {
+        'type': 'scatter',
+        'mode': 'lines',
+        'name': 'residual average (full)',
+        'line': {
+            'width': 1,
+            'color': 'yellow'
+        },
+        'x': x_av,
+        'y': np.linspace(np.std(r), np.std(r), len(x_av))
+    },
+    {
+        'type': 'scatter',
+        'mode': 'lines',
+        'name': 'residual average',
+        'line': {
+            'width': 0.2,
+            'color': 'white'
+        },
+        'x': x_av,
+        'y': smoothing(r, K)
+    },
+    {
+        'type': 'scatter',
+        'mode': 'lines',
+        'name': 'residual stdev',
+        'line': {
+            'width': 0.2,
+            'color': 'yellow'
+        },
+        'x': x_av,
+        'y': gdev(r, K)
+    },
+]
 
-ax[1].plot(x_av, np.linspace(np.mean(r), np.mean(r), len(x_av)), '-.', lw=0.7,
-           ms=0.7, color=glob_style([0, 0, 1]))
-ax[1].plot(x_av, smoothing(r, K), '--', lw=0.7, ms=0.7,
-           color=glob_style([0, 0, 0]))
+layout = {
+    # 'showlegend': False,
+    'width': 750,
+    'height': 900,
+    'legend': {
+        'orientation': 'h',
+        'yanchor': 'bottom',
+        'y': 1.02,
+        'xanchor': 'right',
+        'x': 1
+    },
+    'xaxis_title': 'wavenumber [cm^-1]',
+    'yaxis_title': 'counts (data + fit + stdev)',
+    # 'yaxis2_title': 'penalty',
+    'scene1': {
+        # 'name': 'Data fit with penalty',
+        'xaxis': {
+            'title': 'wavenumber'
+        },
+        'yaxis': {
+            'title': 'counts (data+fit+stdev)'
+        }
+    },
+    'scene2': {
+        'xaxis': {
+            'title': 'wavenumber'
+        },
+        'yaxis': {
+            'title': 'counts'
+        }
+    }
+}
 
-ax1.plot(x_av, gd, '-', lw=0.7, ms=0.7, color=glob_style([0, 0, 0]))
+# for nr, traces in enumerate([traces1, traces2]):
+for trace in traces1:
+    if 'yaxis' in trace:
+        fig.add_trace(trace, row=1, col=1, secondary_y=True)
+    else:
+        fig.add_trace(trace, row=1, col=1, secondary_y=False)
 
-ax[0].plot(x_av, lorentz(v, x_av), '-', color=glob_style([0, 0, 0, 0.3]),
-           lw=0.9, ms=0.9)
-ax[0].plot(x_av, raman(sol, x_av), '-', color=glob_style([1, 0, 0]),
-           lw=0.9)
-ax[0].plot(x_av, raman(sol, x_av)+smoothing(r, K), '--',
-           color=glob_style([1, 0, 0]), lw=0.9)
+for trace in traces2:
+    if 'yaxis' in trace:
+        fig.add_trace(trace, row=2, col=1)
+    else:
+        fig.add_trace(trace, row=2, col=1)
+fig.update_layout(layout)
+
+fig.show()
+
+# fig, ax = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(10, 10))
+# ax[0].set_title(f"Average data with stddev")
+# ax[1].set_title("Residual with average and deviations")
+# ax[0].plot(x_av, y, '.', ms=0.7, lw=0.7, color=glob_style([0, 0, 0]))
+# ax[0].plot(x_av, y_stdev, '.', ms=0.7, lw=0.7, color=glob_style([0, 0, 1]))
+
+# ax1 = plt.twinx(ax[0])
+# # ax1.set_ylim([0, 1200])
+
+# ax[1].plot(x_av, r, '.', lw=0.7, ms=0.8, color=glob_style([0, 0, 0]))
+
+# ax2 = plt.twinx(ax[1])
+# ax2.set_ylim([0, 1200])
+# ax2.plot(x_av, gdev(r, K), '-', lw=0.7, ms=0.7, color=glob_style([0, 0, 0]))
+# ax2.plot(x_av, np.linspace(np.std(r), np.std(r), len(x_av)), '--', lw=0.7,
+#          ms=0.7, color=glob_style([0, 0, 1]))
+
+# ax[1].plot(x_av, np.linspace(np.mean(r), np.mean(r), len(x_av)), '-.', lw=0.7,
+#            ms=0.7, color=glob_style([0, 0, 1]))
+# ax[1].plot(x_av, smoothing(r, K), '--', lw=0.7, ms=0.7,
+#            color=glob_style([0, 0, 0]))
+
+# ax1.plot(x_av, gd, '-', lw=0.7, ms=0.7, color=glob_style([0, 0, 0]))
+
+# ax[0].plot(x_av, lorentz(v, x_av), '-', color=glob_style([0, 0, 0, 0.3]),
+#            lw=0.9, ms=0.9)
+# ax[0].plot(x_av, raman(sol, x_av), '-', color=glob_style([1, 0, 0]),
+#            lw=0.9)
+# ax[0].plot(x_av, raman(sol, x_av)+smoothing(r, K), '--',
+#            color=glob_style([1, 0, 0]), lw=0.9)
 
 # fig.savefig(f"./.data/{direct}/fit/average_{direct}_fit.pdf")
+
+fig = psp.make_subplots()
+
+fig.layout.template = plotly_global
+
+traces = [
+    {
+        'name': 'data',
+        'type': 'scatter',
+        'mode': 'markers',
+        'marker': {
+            'size': 2,
+            'color': 'white'
+        },
+        'x': x_av,
+        'y': y_av
+    },
+    {
+        'name': 'fit',
+        'type': 'scatter',
+        'mode': 'lines',
+        'line': {
+            'width': 1,
+            'color': 'cyan'
+        },
+        'x': x_av,
+        'y': raman(sol, x_av)
+    }
+]
+
+spectrals = []
+
+for nr, n in enumerate(range(0, len(sol)-1, 3)):
+    spectrals.append({
+        'name': f'Comp. #{nr}',
+        'text': f'A:{sol[n]}\nx:{sol[n+1]}\nw:{sol[n+2]}',
+        'type': 'scatter',
+        'mode': 'lines',
+        'line': {
+            'width': 1,
+            'color': 'white'
+        },
+        # 'x': np.linspace(min(x_av), max(x_av), len(x_av)*3),
+        'x': x_av,
+        # 'y': lorentz(sol[n:n+3], np.linspace(min(x_av), max(x_av),
+        #  len(x_av)*3))
+        'y': lorentz(sol[n:n+3], x_av)
+    })
+
+traces += spectrals
+
+layout = {
+    'title': 'Spectral components for average model',
+    # 'legend': {
+    #     'orientation': 'h',
+    #     'yanchor': 'bottom',
+    #     'y': 1.02,
+    #     'xanchor': 'right',
+    #     'x': 1
+    # },
+    'xaxis_title': 'wavenumber [cm^-1]',
+    'yaxis_title': 'counts (data + fit + compnts)',
+    # 'yaxis2_title': 'penalty',
+    'scene': {
+        # 'name': 'Data fit with penalty',
+        'xaxis': {
+            'title': 'wavenumber'
+        },
+        'yaxis': {
+            'title': 'counts (data+fit+stdev)'
+        }
+    },
+    'margin': {
+        't': 25,
+        'b': 30,
+        'l': 30,
+        'r': 30
+    },
+}
+
+for trace in traces:
+    fig.add_trace(trace, row=1, col=1)
+
+fig.update_layout(layout)
+
+fig.show()
+
 # # %%
 # Visual of spectrum components
-fig, ax = plt.subplots(figsize=(10, 10))
-ax.set_title(f"Spectral components for average model")
-ax.set_xlim([min(x_av), max(x_av)])
-ax.set_ylim([0, max(y)*1.25])
-ax.plot(x_av, y, '.', ms=2, color=glob_style([0, 0, 0]))
-ax.plot(x_av, raman(sol, x_av), '-', lw=0.7, color=glob_style([1, 0, 0]))
-for n in range(0, len(sol)-1, 3):
-    ax.plot(x_av, lorentz(sol[n:n+3], x_av), lw=0.7,
-            color=glob_style([0, 0, 0, 0.3]))
-    if 500 < sol[n:n+3][2] < 3000:
-        if 0 < abs(sol[n:n+3][0]) < 14000:
-            ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2,
-                    color=glob_style([1, 0, 0]))
-            ax.text(sol[n:n+3][2], abs(sol[n:n+3][0]),
-                    f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][2]),1))}")
-        else:
-            ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2,
-                    color=glob_style([1, 0, 0]))
-            ax.text(sol[n:n+3][2], 14000,
-                    f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][2]),1))}")
+# fig, ax = plt.subplots(figsize=(10, 10))
+# ax.set_title(f"Spectral components for average model")
+# ax.set_xlim([min(x_av), max(x_av)])
+# ax.set_ylim([0, max(y)*1.25])
+# ax.plot(x_av, y, '.', ms=2, color=glob_style([0, 0, 0]))
+# ax.plot(x_av, raman(sol, x_av), '-', lw=0.7, color=glob_style([1, 0, 0]))
+# for n in range(0, len(sol)-1, 3):
+#     ax.plot(x_av, lorentz(sol[n:n+3], x_av), lw=0.7,
+#             color=glob_style([0, 0, 0, 0.3]))
+#     if 500 < sol[n:n+3][2] < 3000:
+#         if 0 < abs(sol[n:n+3][0]) < 14000:
+#             ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2,
+#                     color=glob_style([1, 0, 0]))
+#             ax.text(sol[n:n+3][2], abs(sol[n:n+3][0]),
+#                     f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][2]),1))}")
+#         else:
+#             ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2,
+#                     color=glob_style([1, 0, 0]))
+#             ax.text(sol[n:n+3][2], 14000,
+#                     f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][2]),1))}")
 # fig.savefig(f"./.data/{direct}/comp/average_{direct}_comp.pdf")
 
 # %%
@@ -488,68 +738,68 @@ for dset in tbl.keys():
     config[material]['solutions'][direct].append(sol)
 
     # # %%
-    # Main fitter plotter
-    K = M
-    res = residual(raman, x_av, y, y_stdev)
-    r = dif(sol)
-    fig, ax = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(10, 10))
-    ax[0].set_title(f"Data with stddev for {dset} degrees {direct}")
-    ax[1].set_title("Residual with average and deviations")
-    ax[0].plot(x_av, y, '.', ms=0.7, lw=0.7, color=glob_style([0, 0, 0]))
-    ax[0].plot(x_av, y_stdev, '.', ms=0.7, lw=0.7, color=glob_style([0, 0, 1]))
+    # # Main fitter plotter
+    # K = M
+    # res = residual(raman, x_av, y, y_stdev)
+    # r = dif(sol)
+    # fig, ax = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(10, 10))
+    # ax[0].set_title(f"Data with stddev for {dset} degrees {direct}")
+    # ax[1].set_title("Residual with average and deviations")
+    # ax[0].plot(x_av, y, '.', ms=0.7, lw=0.7, color=glob_style([0, 0, 0]))
+    # ax[0].plot(x_av, y_stdev, '.', ms=0.7, lw=0.7, color=glob_style([0, 0, 1]))
 
-    ax1 = plt.twinx(ax[0])
-    ax1.set_ylim([0, 1200])
+    # ax1 = plt.twinx(ax[0])
+    # ax1.set_ylim([0, 1200])
 
-    ax[1].plot(x_av, r, '.', lw=0.7, ms=0.8, color=glob_style([0, 0, 0]))
+    # ax[1].plot(x_av, r, '.', lw=0.7, ms=0.8, color=glob_style([0, 0, 0]))
 
-    ax2 = plt.twinx(ax[1])
-    ax2.set_ylim([0, 1200])
-    ax2.plot(x_av, gdev(r, K), '-', lw=0.7, ms=0.7,
-             color=glob_style([0, 0, 0]))
-    ax2.plot(x_av, np.linspace(np.std(r), np.std(r), len(x_av)), '--', lw=0.7,
-             ms=0.7, color=glob_style([0, 0, 1]))
+    # ax2 = plt.twinx(ax[1])
+    # ax2.set_ylim([0, 1200])
+    # ax2.plot(x_av, gdev(r, K), '-', lw=0.7, ms=0.7,
+    #          color=glob_style([0, 0, 0]))
+    # ax2.plot(x_av, np.linspace(np.std(r), np.std(r), len(x_av)), '--', lw=0.7,
+    #          ms=0.7, color=glob_style([0, 0, 1]))
 
-    ax[1].plot(x_av, np.linspace(np.mean(r), np.mean(r), len(x_av)), '-.',
-               lw=0.7, ms=0.7, color=glob_style([0, 0, 1]))
-    ax[1].plot(x_av, smoothing(r, K), '--', lw=0.7, ms=0.7,
-               color=glob_style([0, 0, 0]))
+    # ax[1].plot(x_av, np.linspace(np.mean(r), np.mean(r), len(x_av)), '-.',
+    #            lw=0.7, ms=0.7, color=glob_style([0, 0, 1]))
+    # ax[1].plot(x_av, smoothing(r, K), '--', lw=0.7, ms=0.7,
+    #            color=glob_style([0, 0, 0]))
 
-    ax1.plot(x_av, gdev(r, K), '-', lw=0.7, ms=0.7,
-             color=glob_style([0, 0, 0]))
+    # ax1.plot(x_av, gdev(r, K), '-', lw=0.7, ms=0.7,
+    #          color=glob_style([0, 0, 0]))
 
-    ax[0].plot(x_av, lorentz(v, x_av), '-', color=glob_style([0, 0, 0, 0.3]),
-               lw=0.9, ms=0.9)
-    ax[0].plot(x_av, raman(sol, x_av), '-', color=glob_style([1, 0, 0]),
-               lw=0.9)
-    ax[0].plot(x_av, raman(sol, x_av)+smoothing(r, K), '--',
-               color=glob_style([1, 0, 0]), lw=0.9)
+    # ax[0].plot(x_av, lorentz(v, x_av), '-', color=glob_style([0, 0, 0, 0.3]),
+    #            lw=0.9, ms=0.9)
+    # ax[0].plot(x_av, raman(sol, x_av), '-', color=glob_style([1, 0, 0]),
+    #            lw=0.9)
+    # ax[0].plot(x_av, raman(sol, x_av)+smoothing(r, K), '--',
+    #            color=glob_style([1, 0, 0]), lw=0.9)
 
-    fig.savefig(f"./.data/{direct}/fit/{dset}_{direct}_fit.pdf")
-    # # %%
-    # Visual of spectrum components
-    fig, ax = plt.subplots(figsize=(10, 10))
-    ax.set_title(f"Spectral components for {dset} degrees {direct}")
-    ax.set_xlim([min(x_av), max(x_av)])
-    ax.set_ylim([0, max(y)*1.25])
-    ax.plot(x_av, y, '.', ms=2, color=glob_style([0, 0, 0]))
-    ax.plot(x_av, raman(sol, x_av), '-', lw=0.7, color=glob_style([1, 0, 0]))
-    for n in range(0, len(sol)-1, 3):
-        ax.plot(x_av, lorentz(sol[n:n+3], x_av), lw=0.7,
-                color=glob_style([0, 0, 0, 0.3]))
-        if 500 < sol[n:n+3][2] < 3000:
-            if 0 < abs(sol[n:n+3][0]) < 14000:
-                ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2,
-                        color=glob_style([1, 0, 0]))
-                ax.text(sol[n:n+3][2], abs(sol[n:n+3][0]),
-                        f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][2]),1))}")
-            else:
-                ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2,
-                        color=glob_style([1, 0, 0]))
-                ax.text(sol[n:n+3][2], 14000,
-                        f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][2]),1))}")
-    # fig.savefig(f"./.data/{direct}/comp/{dset}_{direct}_comp.pdf")
-    plt.show()
+    # fig.savefig(f"./.data/{direct}/fit/{dset}_{direct}_fit.pdf")
+    # # # %%
+    # # Visual of spectrum components
+    # fig, ax = plt.subplots(figsize=(10, 10))
+    # ax.set_title(f"Spectral components for {dset} degrees {direct}")
+    # ax.set_xlim([min(x_av), max(x_av)])
+    # ax.set_ylim([0, max(y)*1.25])
+    # ax.plot(x_av, y, '.', ms=2, color=glob_style([0, 0, 0]))
+    # ax.plot(x_av, raman(sol, x_av), '-', lw=0.7, color=glob_style([1, 0, 0]))
+    # for n in range(0, len(sol)-1, 3):
+    #     ax.plot(x_av, lorentz(sol[n:n+3], x_av), lw=0.7,
+    #             color=glob_style([0, 0, 0, 0.3]))
+    #     if 500 < sol[n:n+3][2] < 3000:
+    #         if 0 < abs(sol[n:n+3][0]) < 14000:
+    #             ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2,
+    #                     color=glob_style([1, 0, 0]))
+    #             ax.text(sol[n:n+3][2], abs(sol[n:n+3][0]),
+    #                     f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][2]),1))}")
+    #         else:
+    #             ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2,
+    #                     color=glob_style([1, 0, 0]))
+    #             ax.text(sol[n:n+3][2], 14000,
+    #                     f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][2]),1))}")
+    # # fig.savefig(f"./.data/{direct}/comp/{dset}_{direct}_comp.pdf")
+    # plt.show()
 # %%
 # Radial for chosen peak
 # fig, ax = plt.subplots(figsize=(10, 10))
@@ -624,6 +874,7 @@ traces = [
         'yaxis': 'y2'
     }]
 layout = {
+    'title': 'Residuals',
     'yaxis1': {
         'color': '#5577ff'
     },
@@ -659,6 +910,7 @@ traces = [
     }
 ]
 layout = {
+    'title': 'Data vs fit',
     'yaxis2': {
         'overlaying': 'y',
         'side': 'right'
