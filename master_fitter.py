@@ -5,17 +5,16 @@ import re
 import warnings
 
 import plotly.express as pex
-import plotly.graph_objects as pgo
 import plotly.subplots as psp
+import plotly.graph_objects as pgo
 
-import matplotlib.pyplot as plt
-# from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
 import numpy as np
+import matplotlib.pyplot as plt
 from scipy.optimize import leastsq
 
-from nano.functions import d, nearest_val, pearson, smoothing, xpeak
 from nano.table import table
 from nano.addfun import gdev, lorentz, residual, spectrum
+from nano.functions import d, nearest_val, pearson, smoothing, xpeak
 
 warnings.filterwarnings("ignore")
 plt.style.use('dark_background')
@@ -28,7 +27,6 @@ def glob_style(clr): return np.array([1, 1, 1, 1])[:len(clr)]-np.array(clr)
 def percentage(u, v):
     val = 100*u/v
     dig = int(abs(np.log10(val)-3))
-    # print(dig)
     return f"{round(val, dig)}%"
 
 
@@ -40,7 +38,6 @@ config = {
         'count': 20,
         'day': '190725',
         'measure': 'polar_hbn',
-        # 'direct': 'VH',
         'M': {
             'init': 500,
             'final': 10
@@ -59,7 +56,6 @@ config = {
         'count': 15,
         'day': '190726',
         'measure': 'polar_grf',
-        # 'direct': 'VH',
         'M': {
             'init': 500,
             'final': 20
@@ -113,8 +109,7 @@ y_stdev = (y_stdev - y_av**2)**0.5
 x_av /= ctr
 # %%
 # Main resgd fitter
-# for M in [10, 20, 30, 50, 75, 100, 150, 200, 250]:
-# print(f"M = {M}")
+
 raman = spectrum(lorentz, 3)
 dif = residual(raman, x_av, y_av)
 ressq = residual(raman, x_av, y_av, 1/y_av**0.5)
@@ -135,8 +130,7 @@ def resg_gen(fn, u, v, w):
 
 M = config[material]['M']['init']
 while len(sol)/3 < config[material]['init']:
-    gd = (gdev(r, M)**2 + gav(r, M)**2)  # V2
-    # resgd = resg_gen(raman, x_av, y, 1/gd)
+    gd = (gdev(r, M)**2 + gav(r, M)**2)
     resgd = residual(raman, x_av, y, 1/gd)
     p = xpeak(x_av, gd, max(gd), max(gd)/2)
     hmhw = abs(x_av[p[0]] - x_av[p[-1]])/2
@@ -145,16 +139,13 @@ while len(sol)/3 < config[material]['init']:
     v = [abs(Amp), hmhw, x0]
     sol = list(sol)
     sol += [Amp, hmhw, x0]
-    # if len(sol)/3 % 3 == 0 or curve_count - len(sol)/3 < 3:
     sol, h = leastsq(dif, sol)
     r = dif(sol)
-    # print(f"{int(len(sol)/3)}: {r.dot(r)}")
     print(f"{int(len(sol)/3)}: {percentage(r.dot(r), y.dot(y))}")
 
 M = config[material]['M']['final']
 while len(sol)/3 < config[material]['count']:
-    gd = (gdev(r, M)**2 + gav(r, M)**2)  # V2
-    # resgd = resg_gen(raman, x_av, y, 1/gd)
+    gd = (gdev(r, M)**2 + gav(r, M)**2)
     resgd = residual(raman, x_av, y, 1/gd)
     p = xpeak(x_av, gd, max(gd), max(gd)/2)
     hmhw = abs(x_av[p[0]] - x_av[p[-1]])/2
@@ -163,13 +154,10 @@ while len(sol)/3 < config[material]['count']:
     v = [abs(Amp), hmhw, x0]
     sol = list(sol)
     sol += [Amp, hmhw, x0]
-    # if len(sol)/3 % 3 == 0 or curve_count - len(sol)/3 < 3:
     sol, h = leastsq(dif, sol)
     r = dif(sol)
-    # print(f"{int(len(sol)/3)}: {r.dot(r)}")
     print(f"{int(len(sol)/3)}: {percentage(r.dot(r), y.dot(y))}")
 
-# config[material]['average'][direct] = sol.copy()
 
 # %%
 # Active vs overall surface
@@ -248,7 +236,6 @@ while True:
     cs = ax.contour(X, Y, Z, linewidths=0.7, levels=levs)
     ax.clabel(cs, inline=True, fontsize=8)
 
-    # # %%
     # Only those which meet the requirement of Z >= 0.05
     new_req = []
     for n in range(len(requirement)):
@@ -258,32 +245,23 @@ while True:
             print(f"Trimmed: index {n}")
     new_req = np.array(new_req)
     sol = sol[new_req]
-    # fig.savefig(f"./.data/{direct}/selector/average_selector_{direct}_{ix}.pdf")
     if False not in requirement:
         print("No trimming")
         break
     ix += 1
-# setting number of curves
-# if initial:
-#     solutions += [sol]
-#     config[material]['average'][direct] = sol
-#     curve_count = int(len(sol)/3)
-#     initial = False
-# config[material]['average'][direct] = sol
 
 config[material]['average'][direct] = sol.copy()
 
 # %%
 # Main fitter plotter
 K = M
-gd = (gdev(r, M)**2 + gav(r, M)**2)  # V2
-# res = residual(raman, x_av, y, y_stdev)
+gd = (gdev(r, M)**2 + gav(r, M)**2)
 r = dif(sol)
 
 plotly_global = 'plotly_dark'
 fig = psp.make_subplots(rows=2, cols=1, shared_xaxes=True,
                         specs=[[{'secondary_y': True}],
-                                [{'secondary_y': False}]])
+                               [{'secondary_y': False}]])
 fig.layout.template = plotly_global
 
 traces1 = [
@@ -326,8 +304,7 @@ traces1 = [
         'name': 'penalty',
         'line': {
             'width': 0.1,
-            'color': 'white',
-            # 'dash': 'dash'
+            'color': 'white'
         },
         'yaxis': 'y2',
         'x': x_av,
@@ -394,7 +371,6 @@ traces2 = [
 ]
 
 layout = {
-    # 'showlegend': False,
     'width': 750,
     'height': 900,
     'legend': {
@@ -406,9 +382,7 @@ layout = {
     },
     'xaxis_title': 'wavenumber [cm^-1]',
     'yaxis_title': 'counts (data + fit + stdev)',
-    # 'yaxis2_title': 'penalty',
     'scene1': {
-        # 'name': 'Data fit with penalty',
         'xaxis': {
             'title': 'wavenumber'
         },
@@ -426,7 +400,6 @@ layout = {
     }
 }
 
-# for nr, traces in enumerate([traces1, traces2]):
 for trace in traces1:
     if 'yaxis' in trace:
         fig.add_trace(trace, row=1, col=1, secondary_y=True)
@@ -441,39 +414,6 @@ for trace in traces2:
 fig.update_layout(layout)
 
 fig.show()
-
-# fig, ax = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(10, 10))
-# ax[0].set_title(f"Average data with stddev")
-# ax[1].set_title("Residual with average and deviations")
-# ax[0].plot(x_av, y, '.', ms=0.7, lw=0.7, color=glob_style([0, 0, 0]))
-# ax[0].plot(x_av, y_stdev, '.', ms=0.7, lw=0.7, color=glob_style([0, 0, 1]))
-
-# ax1 = plt.twinx(ax[0])
-# # ax1.set_ylim([0, 1200])
-
-# ax[1].plot(x_av, r, '.', lw=0.7, ms=0.8, color=glob_style([0, 0, 0]))
-
-# ax2 = plt.twinx(ax[1])
-# ax2.set_ylim([0, 1200])
-# ax2.plot(x_av, gdev(r, K), '-', lw=0.7, ms=0.7, color=glob_style([0, 0, 0]))
-# ax2.plot(x_av, np.linspace(np.std(r), np.std(r), len(x_av)), '--', lw=0.7,
-#          ms=0.7, color=glob_style([0, 0, 1]))
-
-# ax[1].plot(x_av, np.linspace(np.mean(r), np.mean(r), len(x_av)), '-.', lw=0.7,
-#            ms=0.7, color=glob_style([0, 0, 1]))
-# ax[1].plot(x_av, smoothing(r, K), '--', lw=0.7, ms=0.7,
-#            color=glob_style([0, 0, 0]))
-
-# ax1.plot(x_av, gd, '-', lw=0.7, ms=0.7, color=glob_style([0, 0, 0]))
-
-# ax[0].plot(x_av, lorentz(v, x_av), '-', color=glob_style([0, 0, 0, 0.3]),
-#            lw=0.9, ms=0.9)
-# ax[0].plot(x_av, raman(sol, x_av), '-', color=glob_style([1, 0, 0]),
-#            lw=0.9)
-# ax[0].plot(x_av, raman(sol, x_av)+smoothing(r, K), '--',
-#            color=glob_style([1, 0, 0]), lw=0.9)
-
-# fig.savefig(f"./.data/{direct}/fit/average_{direct}_fit.pdf")
 
 fig = psp.make_subplots()
 
@@ -509,17 +449,14 @@ spectrals = []
 for nr, n in enumerate(range(0, len(sol)-1, 3)):
     spectrals.append({
         'name': f'Comp. #{nr}',
-        'text': f'A:{sol[n]}\nx:{sol[n+1]}\nw:{sol[n+2]}',
+        'text': f'A:{sol[n]}\nw:{sol[n+1]}\nx:{sol[n+2]}',
         'type': 'scatter',
         'mode': 'lines',
         'line': {
-            'width': 1,
+            'width': 0.5,
             'color': 'white'
         },
-        # 'x': np.linspace(min(x_av), max(x_av), len(x_av)*3),
         'x': x_av,
-        # 'y': lorentz(sol[n:n+3], np.linspace(min(x_av), max(x_av),
-        #  len(x_av)*3))
         'y': lorentz(sol[n:n+3], x_av)
     })
 
@@ -527,18 +464,9 @@ traces += spectrals
 
 layout = {
     'title': 'Spectral components for average model',
-    # 'legend': {
-    #     'orientation': 'h',
-    #     'yanchor': 'bottom',
-    #     'y': 1.02,
-    #     'xanchor': 'right',
-    #     'x': 1
-    # },
     'xaxis_title': 'wavenumber [cm^-1]',
     'yaxis_title': 'counts (data + fit + compnts)',
-    # 'yaxis2_title': 'penalty',
     'scene': {
-        # 'name': 'Data fit with penalty',
         'xaxis': {
             'title': 'wavenumber'
         },
@@ -561,36 +489,10 @@ fig.update_layout(layout)
 
 fig.show()
 
-# # %%
-# Visual of spectrum components
-# fig, ax = plt.subplots(figsize=(10, 10))
-# ax.set_title(f"Spectral components for average model")
-# ax.set_xlim([min(x_av), max(x_av)])
-# ax.set_ylim([0, max(y)*1.25])
-# ax.plot(x_av, y, '.', ms=2, color=glob_style([0, 0, 0]))
-# ax.plot(x_av, raman(sol, x_av), '-', lw=0.7, color=glob_style([1, 0, 0]))
-# for n in range(0, len(sol)-1, 3):
-#     ax.plot(x_av, lorentz(sol[n:n+3], x_av), lw=0.7,
-#             color=glob_style([0, 0, 0, 0.3]))
-#     if 500 < sol[n:n+3][2] < 3000:
-#         if 0 < abs(sol[n:n+3][0]) < 14000:
-#             ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2,
-#                     color=glob_style([1, 0, 0]))
-#             ax.text(sol[n:n+3][2], abs(sol[n:n+3][0]),
-#                     f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][2]),1))}")
-#         else:
-#             ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2,
-#                     color=glob_style([1, 0, 0]))
-#             ax.text(sol[n:n+3][2], 14000,
-#                     f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][2]),1))}")
-# fig.savefig(f"./.data/{direct}/comp/average_{direct}_comp.pdf")
-
 # %%
-# Proper logic
+# Proper logic (fitting all data sets)
 for dset in tbl.keys():
-    # # %%
-    # Attempt to apply model to data set
-    # fig, ax = plt.subplots(nrows=2, figsize=(10, 10))
+    # Attempt to apply model to all data sets
     # dset = '#0' its the same '000'
     y = np.array(tbl[dset]['#Intensity'])
     sol, h = leastsq(residual(raman, x_av, y),
@@ -599,12 +501,10 @@ for dset in tbl.keys():
     print(f"For {dset} deg.: {dif(sol).dot(dif(sol))}")
 
     ix = 0
-    # # %%
     # Main resgd fitter
     M = config[material]['M']['init']
     while len(sol)/3 < config[material]['init']:
-        gd = (gdev(r, M)**2 + gav(r, M)**2)  # V2
-        # resgd = resg_gen(raman, x_av, y, 1/gd)
+        gd = (gdev(r, M)**2 + gav(r, M)**2)
         resgd = residual(raman, x_av, y, 1/gd)
         p = xpeak(x_av, gd, max(gd), max(gd)/2)
         hmhw = abs(x_av[p[0]] - x_av[p[-1]])/2
@@ -613,16 +513,13 @@ for dset in tbl.keys():
         v = [abs(Amp), hmhw, x0]
         sol = list(sol)
         sol += [Amp, hmhw, x0]
-        # if len(sol)/3 % 3 == 0 or curve_count - len(sol)/3 < 3:
         sol, h = leastsq(dif, sol)
         r = dif(sol)
-        # print(f"{int(len(sol)/3)}: {r.dot(r)}")
         print(f"{int(len(sol)/3)}: {percentage(r.dot(r), y.dot(y))}")
 
     M = config[material]['M']['final']
     while len(sol)/3 < config[material]['count']:
-        gd = (gdev(r, M)**2 + gav(r, M)**2)  # V2
-        # resgd = resg_gen(raman, x_av, y, 1/gd)
+        gd = (gdev(r, M)**2 + gav(r, M)**2)
         resgd = residual(raman, x_av, y, 1/gd)
         p = xpeak(x_av, gd, max(gd), max(gd)/2)
         hmhw = abs(x_av[p[0]] - x_av[p[-1]])/2
@@ -631,30 +528,20 @@ for dset in tbl.keys():
         v = [abs(Amp), hmhw, x0]
         sol = list(sol)
         sol += [Amp, hmhw, x0]
-        # if len(sol)/3 % 3 == 0 or curve_count - len(sol)/3 < 3:
         sol, h = leastsq(dif, sol)
         r = dif(sol)
-        # print(f"{int(len(sol)/3)}: {r.dot(r)}")
         print(f"{int(len(sol)/3)}: {percentage(r.dot(r), y.dot(y))}")
 
         # # %%
         # Active vs overall surface
 
-        # fig, ax = plt.subplots()
-        # fig.set_size_inches(15, 15)
-        # ax.set_title(f"Curve selector for {dset} degrees {direct}")
-        # ax.set_xlabel('Surface (log10)')
-        # ax.set_ylabel('Active surface (log10)')
         surface = []
         active = []
         for n in range(0, len(sol)-1, 3):
             surface += [np.log10(abs(sol[n]*sol[n+1]))]
             active += [np.log10(abs(sum(lorentz(sol[n:n+3], x_av)*d(x_av))))]
-            # ax.text(surface[-1], active[-1], f"{int(n/3)}", ha='left')
         surface = np.array(surface)
         active = np.array(active)
-        # ax.plot(surface, active, '.', color=glob_style([0, 0, 0]))
-        # ax.set_aspect(aspect='equal', adjustable='box')
 
         def bivariate(u, v, r):
             return np.exp(-(u**2 - 2*r*u*v + v**2)/(2*(1-r**2)**0.5))
@@ -702,19 +589,6 @@ for dset in tbl.keys():
         requirement = bivariate((surface-s_m)/s_std,
                                 (active-a_m)/a_std, R) >= 0.05
 
-        # for n in range(len(surface)):
-        #     if not requirement[n]:
-        #         ax.plot(surface[n], active[n], '.', color='red')
-
-        # ax.plot(s_m, a_m, '+', ms=5, color=[1, 0, 1])
-        # ax.text(s_m, a_m, f"({round(s_m, 2)},{round(a_m, 2)})",
-        #         color=[1, 1, 0], fontsize=8)
-        # levs = np.array([1e-4, 2e-4, 5e-4, 0.001, 0.002, 0.005, 0.01, 0.02,
-        #                  0.05, 0.1, 0.2, 0.5, 1])*max(Z.flatten())
-        # cs = ax.contour(X, Y, Z, linewidths=0.7, levels=levs)
-        # ax.clabel(cs, inline=True, fontsize=8)
-
-        # # %%
         # Only those which meet the requirement of Z >= 0.05
         new_req = []
         for n in range(len(requirement)):
@@ -724,258 +598,190 @@ for dset in tbl.keys():
                 print(f"Trimmed: index {n}")
         new_req = np.array(new_req)
         sol = sol[new_req]
-        # fig.savefig(f"./.data/{direct}/selector/average_selector_{direct}_{ix}.pdf")
         if False not in requirement:
             print("No trimming")
             break
         ix += 1
-    # setting number of curves
-    # if initial:
-    #     solutions += [sol]
-    #     config[material]['average'][direct] = sol
-    #     curve_count = int(len(sol)/3)
-    #     initial = False
     config[material]['solutions'][direct].append(sol)
 
-    # # %%
-    # # Main fitter plotter
-    # K = M
-    # res = residual(raman, x_av, y, y_stdev)
-    # r = dif(sol)
-    # fig, ax = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(10, 10))
-    # ax[0].set_title(f"Data with stddev for {dset} degrees {direct}")
-    # ax[1].set_title("Residual with average and deviations")
-    # ax[0].plot(x_av, y, '.', ms=0.7, lw=0.7, color=glob_style([0, 0, 0]))
-    # ax[0].plot(x_av, y_stdev, '.', ms=0.7, lw=0.7, color=glob_style([0, 0, 1]))
 
-    # ax1 = plt.twinx(ax[0])
-    # ax1.set_ylim([0, 1200])
-
-    # ax[1].plot(x_av, r, '.', lw=0.7, ms=0.8, color=glob_style([0, 0, 0]))
-
-    # ax2 = plt.twinx(ax[1])
-    # ax2.set_ylim([0, 1200])
-    # ax2.plot(x_av, gdev(r, K), '-', lw=0.7, ms=0.7,
-    #          color=glob_style([0, 0, 0]))
-    # ax2.plot(x_av, np.linspace(np.std(r), np.std(r), len(x_av)), '--', lw=0.7,
-    #          ms=0.7, color=glob_style([0, 0, 1]))
-
-    # ax[1].plot(x_av, np.linspace(np.mean(r), np.mean(r), len(x_av)), '-.',
-    #            lw=0.7, ms=0.7, color=glob_style([0, 0, 1]))
-    # ax[1].plot(x_av, smoothing(r, K), '--', lw=0.7, ms=0.7,
-    #            color=glob_style([0, 0, 0]))
-
-    # ax1.plot(x_av, gdev(r, K), '-', lw=0.7, ms=0.7,
-    #          color=glob_style([0, 0, 0]))
-
-    # ax[0].plot(x_av, lorentz(v, x_av), '-', color=glob_style([0, 0, 0, 0.3]),
-    #            lw=0.9, ms=0.9)
-    # ax[0].plot(x_av, raman(sol, x_av), '-', color=glob_style([1, 0, 0]),
-    #            lw=0.9)
-    # ax[0].plot(x_av, raman(sol, x_av)+smoothing(r, K), '--',
-    #            color=glob_style([1, 0, 0]), lw=0.9)
-
-    # fig.savefig(f"./.data/{direct}/fit/{dset}_{direct}_fit.pdf")
-    # # # %%
-    # # Visual of spectrum components
-    # fig, ax = plt.subplots(figsize=(10, 10))
-    # ax.set_title(f"Spectral components for {dset} degrees {direct}")
-    # ax.set_xlim([min(x_av), max(x_av)])
-    # ax.set_ylim([0, max(y)*1.25])
-    # ax.plot(x_av, y, '.', ms=2, color=glob_style([0, 0, 0]))
-    # ax.plot(x_av, raman(sol, x_av), '-', lw=0.7, color=glob_style([1, 0, 0]))
-    # for n in range(0, len(sol)-1, 3):
-    #     ax.plot(x_av, lorentz(sol[n:n+3], x_av), lw=0.7,
-    #             color=glob_style([0, 0, 0, 0.3]))
-    #     if 500 < sol[n:n+3][2] < 3000:
-    #         if 0 < abs(sol[n:n+3][0]) < 14000:
-    #             ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2,
-    #                     color=glob_style([1, 0, 0]))
-    #             ax.text(sol[n:n+3][2], abs(sol[n:n+3][0]),
-    #                     f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][2]),1))}")
-    #         else:
-    #             ax.plot(sol[n:n+3][2], abs(sol[n:n+3][0]), '.', ms=2,
-    #                     color=glob_style([1, 0, 0]))
-    #             ax.text(sol[n:n+3][2], 14000,
-    #                     f"[{int(n/3)}]  {str(round(abs(sol[n:n+3][2]),1))}")
-    # # fig.savefig(f"./.data/{direct}/comp/{dset}_{direct}_comp.pdf")
-    # plt.show()
 # %%
-# Radial for chosen peak
-# fig, ax = plt.subplots(figsize=(10, 10))
+# Chosen peak plotter
 
-# sols = solutions[:]
+def simple_compnts(sol, comp_nr=0):
+    if comp_nr not in [0, 1, 2]:
+        raise ValueError("Invalid argument comp_nr, proper values include 0, 1"
+                         " or 2")
+    return sol[comp_nr::3]
+
+
+def compnts(sol_set, comp_nr=0):
+    return [simple_compnts(s, comp_nr) for s in sol_set]
+
+
+def gauss(t):
+    return 1/(2*np.pi)**0.5 * np.exp(-0.5*(t)**2)
+
+
+def av_param(value, param, xn, k):
+    param = np.array(param)
+    xn = np.array(xn)
+    gaussian = 1/k * gauss((xn - value)/k)
+    gaussian /= sum(gaussian)
+    return sum(gaussian*param)
+
 
 sols = config[material]['solutions']['VH']
 
-fig = plt.figure(figsize=(20, 20))
-ax1 = fig.add_subplot(221)
-ax1.set_title('Curves of choice')
-ax2 = fig.add_subplot(222)
-ax2.set_title('Peak position')
-ax3 = fig.add_subplot(223)
-ax3.set_title('FWHM')
-ax4 = fig.add_subplot(224, projection='polar')
-ax4.set_title('Amplitude')
-# ax = fig.add_subplot(121, projection='polar')
-# ax1.set_title('Curves of choice')
-# fig1 = plt.figure(figsize=(10, 10))
-max_y = 0
-fltr = 2
-comp = 2
-exclusion = np.array(np.linspace(0, 0, len(sols)), dtype=bool)
-addressing = np.array(np.linspace(-1, -1, len(sols)), dtype=int)
-# exclusion[21] = True
-for nr, s in enumerate(sols):
-    if not exclusion[nr]:
-        s = np.array(s)
-        ix = next(nearest_val(s[np.arange(0, len(s), 1) % 3 == fltr], 1367))
-        if addressing[nr] != -1:
-            ix = addressing[nr]
-        # print(ix)
-        # curr_peak = abs(s[0+3*ix])*abs(s[1+3*ix])
-        ax1.plot(x_av, lorentz(s[3*ix:3*ix+3], x_av), '-', lw=0.7)
-        ax1.text(x_av[-1], lorentz(s[3*ix:3*ix+3], x_av[-1]), f"{nr}/{ix}")
-        pos = abs(s[2+3*ix])
-        hmhw = abs(s[1+3*ix])
-        # amp = abs(s[0+3*ix])*hmhw
-        amp = abs(s[0+3*ix])
-        ax2.plot(nr*10, pos, '.', color=[0, 1, 1], ms=5)
-        ax3.plot(nr*10, hmhw, '.', color=[0, 1, 1], ms=5)
-        ax4.plot(np.pi*nr/18, amp, '.', color=[0, 1, 1], ms=5)
+peak_nr = 36
 
-        # ax1.text(s[2+3*ix], lorentz(s[3*ix:3*ix+3], s[2+3*ix]), f"{nr}/{ix}")
-        if amp > max_y:
-            max_y = amp*1.1
-ax4.set_ylim([0, max_y])
-# ax.set_ylim([0, 2000])
+# Peak selection
+k = 10
+band = 1540
+amp = av_param(band, np.abs(compnts(sols, 0)[peak_nr]), compnts(sols, 2)[peak_nr], k)
+w = av_param(band, np.abs(compnts(sols, 1)[peak_nr]), compnts(sols, 2)[peak_nr], k)
+x0 = av_param(band, np.abs(compnts(sols, 2)[peak_nr]), compnts(sols, 2)[peak_nr], k)
+sol_av = [amp, w, x0]
 
-# %%
-# %%
-fig = pex.scatter()
-fig.layout.template = 'plotly_dark'
-gd = (gdev(r, M)**2 + gav(r, M)**2)  # V2
-mat_av_data = config[material]['average'][direct]
-traces = [
-    {
-        'x': x_av,
-        'y': residual(raman, x_av, y_av, 1/gd)(mat_av_data),
-        'name': 'Res1 (penalty 1/gd)',
-        'mode': 'markers',
-        'marker': {'size': 2},
-        'yaxis': 'y1'
-    },
-    {
-        'x': x_av,
-        'y': residual(raman, x_av, y_av, gd)(mat_av_data),
-        'name': 'Res2 (penalty gd)',
-        'mode': 'markers',
-        'marker': {'size': 2},
-        'yaxis': 'y2'
-    }]
-layout = {
-    'title': 'Residuals',
-    'yaxis1': {
-        'color': '#5577ff'
-    },
-    'yaxis2': {
-        'overlaying': 'y',
-        'side': 'right',
-        'color': '#ff7755'
-    }
-}
-fig.add_traces(traces)
-fig.update_layout(layout)
-fig.show()
+sol = sols[peak_nr]
+y = np.array(tbl[f'#{peak_nr}']['#Intensity'])
 
-# %%
-fig = pex.scatter()
-fig.layout.template = 'plotly_dark'
-gd = gdev(y_av, 10000)
-traces = [
-    {
-        'x': x_av,
-        'y': y_av,
-        'name': 'Data',
-        'mode': 'markers',
-        'marker': {'size': 2},
-        'yaxis': 'y1'
-    },
-    {
-        'x': x_av,
-        'y': raman(config[material]['average'][direct], x_av),
-        'name': 'Fit',
-        'mode': 'lines',
-        'line': {'width': 1}
-    }
-]
-layout = {
-    'title': 'Data vs fit',
-    'yaxis2': {
-        'overlaying': 'y',
-        'side': 'right'
-    }
-}
-fig.add_traces(traces)
-fig.update_layout(layout)
-fig.show()
+# Create figure
+fig = pgo.Figure()
+fig.layout.template = plotly_global
 
-
-# %%
-fig = pex.scatter_3d()
-
-fig.layout.template = 'plotly_dark'
-
-# splitting main vector into sub curves
-
-x_coeff = []
-y_coeff = []
-z_coeff = []
-labels = []
-
-for n in range(0, len(sol)-1, 3):
-    A, b, x0 = sol[n:n+3]
-    x_coeff += [abs(A)]
-    y_coeff += [abs(b)]
-    z_coeff += [x0 - np.mean(x_av)]
-    labels += [f'{int(n/3)}']
-
-
-traces = [
-    {
-        'type': 'scatter3d',
-        'x': x_coeff,
-        'y': y_coeff,
-        'z': z_coeff,
-        'mode': 'markers',
-        'text': labels,
-        'marker': {'size': 2}
-    }
-]
-
-layout = {
-    'scene': {
-        'xaxis': {
-            'title': 'x: Amplitude'
+for ns, sol in enumerate(sols[:]):
+    y = np.array(tbl[f'#{ns}']['#Intensity'])
+    # Basic traces (always visible)
+    traces = [
+        {
+            'name': 'data',
+            'type': 'scatter',
+            'mode': 'markers',
+            'marker': {
+                'size': 2,
+                'color': 'white'
+            },
+            'visible': False,
+            'x': x_av,
+            'y': y
         },
-        'yaxis': {
-            'title': 'y: hmhw'
+        {
+            'name': 'fit',
+            'type': 'scatter',
+            'mode': 'lines',
+            'line': {
+                'width': 1,
+                'color': 'cyan'
+            },
+            'visible': False,
+            'x': x_av,
+            'y': raman(sol, x_av)
         },
-        'zaxis': {
-            'title': 'z: x0'
+        {
+            'name': 'choice',
+            'type': 'scatter',
+            'mode': 'lines',
+            'line': {
+                'width': 1,
+                'color': 'yellow'
+            },
+            'visible': False,
+            'x': x_av,
+            'y': lorentz(sol_av, x_av)
+        },
+        {
+            'name': 'choice curve',
+            'type': 'scatter',
+            'mode': 'lines',
+            'line': {
+                'width': 1,
+                'color': 'magenta'
+            },
+            'visible': False,
+            'x': x_av,
+            'y': 1/k * gauss((x_av - band)/k) * 50000
         }
-    },
-    'margin': {
-        't': 25,
-        'b': 5,
-        'l': 5,
-        'r': 5
-    }
-}
+    ]
 
-fig.add_traces(traces)
-fig.update_layout(layout)
+    for nr, s in enumerate([sol[n:n+3] for n in range(0, len(sol)-1, 3)]):
+        traces += [
+            {
+                'visible': False,
+                'text': f'A:{s[0]}\nw:{s[1]}\nx:{s[2]}',
+                'line': {
+                    'width': 1,
+                    'color': 'white'
+                },
+                'name': f'Comp. #{nr}',
+                'x': x_av,
+                'y': lorentz(s, x_av)
+            }
+        ]
+    for trace in traces:
+        fig.add_trace(trace)
+print(len(fig.data))
+# Make some traces visible
+for n in range(19):
+    fig.data[n].visible = True
+
+# Create and add slider
+steps = []
+for i in range(0, int(len(fig.data)/19), 1):
+    step = {
+        'method': 'update',
+        'args': [
+            {'visible': [False]*len(fig.data)},
+            {'title': f'Angle {i*10} deg.'}
+        ]
+    }
+    for m in range(i*19, (i+1)*19, 1):
+        step["args"][0]["visible"][m] = True
+    steps.append(step)
+
+sliders = [{
+    'active': 0,
+    'currentvalue': {},
+    'pad': {'t': 10},
+    'steps': steps
+}]
+
+fig.update_layout(
+    sliders=sliders
+)
 
 fig.show()
 
 # %%
+fig_polar = pgo.Figure()
+fig_polar.layout.template = plotly_global
+
+k = 10
+band = 1540
+sol_band = []
+for n in range(37):
+    y = np.array(tbl[f'#{n}']['#Intensity'])
+    # amp = av_param(band, np.abs(compnts(sols, 0)[n]), compnts(sols, 2)[n], k)
+    # w = av_param(band, np.abs(compnts(sols, 1)[n]), compnts(sols, 2)[n], k)
+    # x0 = av_param(band, np.abs(compnts(sols, 2)[n]), compnts(sols, 2)[n], k)
+    amp = y[next(nearest_val(x_av, 1582))]-10000
+    w = 5
+    x0 = 1593.8
+    sol_band.append([amp, w, x0])
+
+traces = [
+    {
+        'name': 'intensity',
+        'type': 'scatterpolar',
+        'mode': 'markers',
+        'marker': {
+            'size': 5,
+        },
+        'theta': [theta for theta in range(0, 370, 10)],
+        'r': [sol_band[n][0]*sol_band[n][1]-51000 for n in range(37)]
+    }
+]
+
+fig_polar.add_traces(traces)
+
+fig_polar.show()
