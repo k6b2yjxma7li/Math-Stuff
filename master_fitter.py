@@ -1,7 +1,19 @@
+"""
+_  _  _  __  ___ __  __
+|\\/| /_\\ (_   |  |_  |_)
+|  | | | __)  |  |_  | \\
+__  _ ___ ___ ___ __
+|_  |  |   |  |_  |_)
+|   |  |   |  |__ | \\
+
+Obviously too long script for fitting Raman spectrals and
+extracting particular bands for polar analysis.
+"""
 # %%
 # Imports and prerequisites
 import os
 import re
+import sys
 import warnings
 
 import plotly.express as pex
@@ -16,12 +28,21 @@ from nano.table import table
 from nano.addfun import gdev, lorentz, residual, spectrum
 from nano.functions import d, nearest_val, pearson, smoothing, xpeak
 
-warnings.filterwarnings("ignore")
-plt.style.use('dark_background')
+if "--W" not in sys.argv:
+    warnings.filterwarnings("ignore")
+if "--light" not in sys.argv:
+    plt.style.use('dark_background')
+    plotly_global = 'plotly_dark'
+else:
+    plotly_global = 'plotly'
 gav = smoothing
 
+print(__doc__)
 
-def glob_style(clr): return np.array([1, 1, 1, 1])[:len(clr)]-np.array(clr)
+if "--light" in sys.argv:
+    def glob_style(clr): return clr
+else:
+    def glob_style(clr): return np.array([1, 1, 1, 1])[:len(clr)]-np.array(clr)
 
 
 def percentage(u, v):
@@ -30,14 +51,62 @@ def percentage(u, v):
     return f"{round(val, dig)}%"
 
 
+def simple_compnts(sol, comp_nr=0):
+    if comp_nr not in [0, 1, 2]:
+        raise ValueError("Invalid argument comp_nr, proper values include 0, 1"
+                         " or 2")
+    return sol[comp_nr::3]
+
+
+def compnts(sol_set, comp_nr=0):
+    return [simple_compnts(s, comp_nr) for s in sol_set]
+
+
+def gauss(t):
+    return 1/(2*np.pi)**0.5 * np.exp(-0.5*(t)**2)
+
+
+def av_param(value, param, xn, k):
+    param = np.array(param)
+    xn = np.array(xn)
+    gaussian = 1/k * gauss((xn - value)/k)
+    gaussian /= sum(gaussian)
+    return sum(gaussian*param)
+
+
+def mdv(v, u):
+    v_cp = v.copy()
+    while True:
+        v_cp = d(v_cp)/d(u)
+        yield v_cp
+
+
+def transform(kernel, u, v):
+    u = np.array(u)
+    v = np.array(v)
+    return (sum(v*kernel(u-ui)) for ui in u)
+
+
+def kernel_gen(kernel, params):
+    return lambda t: kernel(params, t)/sum(kernel(params, t))
+
+
+def window(cutoff, center, width):
+    return lambda slt: (np.exp(cutoff*np.array(slt) - center - width/2) +
+                        np.exp(-cutoff*np.array(slt) + center + width/2))
+
+
 # %%
 # Configuration
 config = {
     'hbn': {
-        'init': 5,
-        'count': 20,
+        'fullname': 'hBN',
+        'init': 3,
+        'count': 7,
         'day': '190725',
         'measure': 'polar_hbn',
+        'frame': slice(0, -200),
+        'bands': [1367],
         'M': {
             'init': 500,
             'final': 10
@@ -52,10 +121,13 @@ config = {
         }
     },
     'grf': {
+        'fullname': 'Graphene',
         'init': 5,
-        'count': 15,
+        'count': 12,
         'day': '190726',
         'measure': 'polar_grf',
+        'bands': [1570, 2680],
+        'frame': slice(0, -1),
         'M': {
             'init': 500,
             'final': 20
@@ -74,8 +146,9 @@ config = {
 
 # %%
 # Data loading and preparations
+print("Data loading...", end="")
 material = 'grf'
-direct = 'VH'
+direct = 'VV'
 
 measure = config[material]['measure']
 day = config[material]['day']
@@ -107,6 +180,8 @@ y_av /= ctr
 y_stdev /= ctr
 y_stdev = (y_stdev - y_av**2)**0.5
 x_av /= ctr
+
+print("\tDone")
 # %%
 # Main resgd fitter
 
@@ -115,10 +190,46 @@ dif = residual(raman, x_av, y_av)
 ressq = residual(raman, x_av, y_av, 1/y_av**0.5)
 res = residual(raman, x_av, y_av, y_stdev)
 sol = []
+# Fitting with stdev
+u, v = x_av[config[material]['frame']], y_stdev[config[material]['frame']]
 
-y = y_av
+
+# def dif_plus(slt):
+#     amps = np.array(simple_compnts(slt, 0))
+#     fwhm = np.array(simple_compnts(slt, 1))
+#     xpos = np.array(simple_compnts(slt, 2))
+#     return residual(raman, u, v)(slt)
+
+
+dif = residual(raman, u, v)
+r = dif([1, 1, 0])
+
+sol = []
+
+while 100*r.dot(r)/v.dot(v) > 0.5:
+    # plt.plot(len(sol), np.log(100*r.dot(r)/v.dot(v)), '.', ms=0.7)
+    rk = [ri for ri in transform(kernel_gen(lorentz, [1, 1000, 0]), u, r)]
+    ix_max = np.array(range(len(r)))[r == max(r)][0]
+    pos = np.array(xpeak(u, r, r[ix_max], (r[ix_max]+rk[ix_max])/2))
+    Amp = r[ix_max] - rk[ix_max]
+    fwhm = u[pos][2]-u[pos][0]
+    x0 = u[pos][1]
+    sol += [Amp, fwhm, x0]
+    sol, h = leastsq(dif, sol)
+    sol = list(sol)
+    r = dif(sol)
+    print(f"{int(len(sol)/3)}: {percentage(r.dot(r), v.dot(v))}")
+    plt.plot(u, v, '.', ms=0.7)
+    plt.plot(u, r, '.', ms=0.7)
+    plt.plot(u, lorentz(sol[-3:], u), lw=0.7)
+    plt.show()
+
+print("Average model fitting... ", end="")
+
+y = y_av[config[material]['frame']]
+x = x_av[config[material]['frame']]
 initial = True
-
+dif = residual(raman, x, y)
 r = dif([0, 1, 1])
 
 
@@ -131,14 +242,14 @@ def resg_gen(fn, u, v, w):
 M = config[material]['M']['init']
 while len(sol)/3 < config[material]['init']:
     gd = (gdev(r, M)**2 + gav(r, M)**2)
-    resgd = residual(raman, x_av, y, 1/gd)
-    p = xpeak(x_av, gd, max(gd), max(gd)/2)
-    hmhw = abs(x_av[p[0]] - x_av[p[-1]])/2
+    # resgd = residual(raman, x, y, 1/gd)
+    p = xpeak(x, gd, max(gd), max(gd)/2)
+    fwhm = abs(x[p[0]] - x[p[-1]])/2
     Amp = r[p[1]]
-    x0 = (x_av[p[0]]+x_av[p[-1]])/2
-    v = [abs(Amp), hmhw, x0]
+    x0 = (x[p[0]] + x[p[-1]])/2
+    v = [abs(Amp), fwhm, x0]
     sol = list(sol)
-    sol += [Amp, hmhw, x0]
+    sol += [Amp, fwhm, x0]
     sol, h = leastsq(dif, sol)
     r = dif(sol)
     print(f"{int(len(sol)/3)}: {percentage(r.dot(r), y.dot(y))}")
@@ -146,19 +257,22 @@ while len(sol)/3 < config[material]['init']:
 M = config[material]['M']['final']
 while len(sol)/3 < config[material]['count']:
     gd = (gdev(r, M)**2 + gav(r, M)**2)
-    resgd = residual(raman, x_av, y, 1/gd)
-    p = xpeak(x_av, gd, max(gd), max(gd)/2)
-    hmhw = abs(x_av[p[0]] - x_av[p[-1]])/2
+    # resgd = residual(raman, x, y, 1/gd)
+    p = xpeak(x, gd, max(gd), max(gd)/2)
+    fwhm = abs(x[p[0]] - x[p[-1]])/2
     Amp = r[p[1]]
-    x0 = (x_av[p[0]]+x_av[p[-1]])/2
-    v = [abs(Amp), hmhw, x0]
+    x0 = (x[p[0]] + x[p[-1]])/2
+    v = [abs(Amp), fwhm, x0]
     sol = list(sol)
-    sol += [Amp, hmhw, x0]
+    sol += [Amp, fwhm, x0]
     sol, h = leastsq(dif, sol)
     r = dif(sol)
     print(f"{int(len(sol)/3)}: {percentage(r.dot(r), y.dot(y))}")
-
-
+print("Final: ", end="")
+sol, h = leastsq(dif, sol)
+r = dif(sol)
+print(f"{percentage(r.dot(r), y.dot(y))}")
+print("Fitting: Done")
 # %%
 # Active vs overall surface
 ix = 0
@@ -171,8 +285,13 @@ while True:
     surface = []
     active = []
     for n in range(0, len(sol)-1, 3):
-        surface += [np.log10(abs(sol[n]*sol[n+1]))]
-        active += [np.log10(abs(sum(lorentz(sol[n:n+3], x_av)*d(x_av))))]
+        surface += [np.log10(np.pi*abs(sol[n]*sol[n+1]))]
+        active += [np.log10(abs(sum(lorentz(sol[n:n+3], x)*d(x))))]
+        # and special thanks to that lorentzian which is super thin and high
+        if active[-1] > surface[-1] and min(x) <= sol[n+2] <= max(x):
+            # please don't come back
+            active[-1] = surface[-1]
+            # you make me nervous
         ax.text(surface[-1], active[-1], f"{int(n/3)}", ha='left')
     surface = np.array(surface)
     active = np.array(active)
@@ -251,14 +370,15 @@ while True:
     ix += 1
 
 config[material]['average'][direct] = sol.copy()
-
+if '--show' in sys.argv:
+    plt.show()
 # %%
 # Main fitter plotter
+print("Plotting...")
 K = M
 gd = (gdev(r, M)**2 + gav(r, M)**2)
 r = dif(sol)
 
-plotly_global = 'plotly_dark'
 fig = psp.make_subplots(rows=2, cols=1, shared_xaxes=True,
                         specs=[[{'secondary_y': True}],
                                [{'secondary_y': False}]])
@@ -273,7 +393,7 @@ traces1 = [
             'size': 2,
             'color': 'white'
         },
-        'x': x_av,
+        'x': x,
         'y': y
     },
     {
@@ -284,8 +404,8 @@ traces1 = [
             'width': 1,
             'color': 'cyan'
         },
-        'x': x_av,
-        'y': raman(sol, x_av)
+        'x': x,
+        'y': raman(sol, x)
     },
     {
         'type': 'scatter',
@@ -295,7 +415,7 @@ traces1 = [
             'size': 1,
             'color': 'yellow'
         },
-        'x': x_av,
+        'x': x,
         'y': y_stdev
     },
     {
@@ -307,7 +427,7 @@ traces1 = [
             'color': 'white'
         },
         'yaxis': 'y2',
-        'x': x_av,
+        'x': x,
         'y': 1/gd
     }
 ]
@@ -321,7 +441,7 @@ traces2 = [
             'size': 1,
             'color': 'white'
         },
-        'x': x_av,
+        'x': x,
         'y': r
     },
     {
@@ -332,8 +452,8 @@ traces2 = [
             'width': 1,
             'color': 'white'
         },
-        'x': x_av,
-        'y': np.linspace(np.mean(r), np.mean(r), len(x_av))
+        'x': x,
+        'y': np.linspace(np.mean(r), np.mean(r), len(x))
     },
     {
         'type': 'scatter',
@@ -343,8 +463,8 @@ traces2 = [
             'width': 1,
             'color': 'yellow'
         },
-        'x': x_av,
-        'y': np.linspace(np.std(r), np.std(r), len(x_av))
+        'x': x,
+        'y': np.linspace(np.std(r), np.std(r), len(x))
     },
     {
         'type': 'scatter',
@@ -354,7 +474,7 @@ traces2 = [
             'width': 0.2,
             'color': 'white'
         },
-        'x': x_av,
+        'x': x,
         'y': smoothing(r, K)
     },
     {
@@ -365,7 +485,7 @@ traces2 = [
             'width': 0.2,
             'color': 'yellow'
         },
-        'x': x_av,
+        'x': x,
         'y': gdev(r, K)
     },
 ]
@@ -400,6 +520,17 @@ layout = {
     }
 }
 
+pltconf = {
+    'modeBarButtonsToAdd': [
+        'drawline',
+        'drawopenpath',
+        'drawclosedpath',
+        'drawcircle',
+        'drawrect',
+        'eraseshape'
+    ]
+}
+
 for trace in traces1:
     if 'yaxis' in trace:
         fig.add_trace(trace, row=1, col=1, secondary_y=True)
@@ -413,7 +544,7 @@ for trace in traces2:
         fig.add_trace(trace, row=2, col=1)
 fig.update_layout(layout)
 
-fig.show()
+fig.show(config=pltconf)
 
 fig = psp.make_subplots()
 
@@ -428,7 +559,7 @@ traces = [
             'size': 2,
             'color': 'white'
         },
-        'x': x_av,
+        'x': x,
         'y': y_av
     },
     {
@@ -439,10 +570,21 @@ traces = [
             'width': 1,
             'color': 'cyan'
         },
-        'x': x_av,
-        'y': raman(sol, x_av)
+        'x': x,
+        'y': raman(sol, x)
     }
 ]
+
+pltconf = {
+    'modeBarButtonsToAdd': [
+        'drawline',
+        'drawopenpath',
+        'drawclosedpath',
+        'drawcircle',
+        'drawrect',
+        'eraseshape'
+    ]
+}
 
 spectrals = []
 
@@ -456,8 +598,8 @@ for nr, n in enumerate(range(0, len(sol)-1, 3)):
             'width': 0.5,
             'color': 'white'
         },
-        'x': x_av,
-        'y': lorentz(sol[n:n+3], x_av)
+        'x': x,
+        'y': lorentz(sol[n:n+3], x)
     })
 
 traces += spectrals
@@ -487,47 +629,49 @@ for trace in traces:
 
 fig.update_layout(layout)
 
-fig.show()
+fig.show(config=pltconf)
 
 # %%
 # Proper logic (fitting all data sets)
+print("Directional data fitting...")
 for dset in tbl.keys():
     # Attempt to apply model to all data sets
     # dset = '#0' its the same '000'
-    y = np.array(tbl[dset]['#Intensity'])
-    sol, h = leastsq(residual(raman, x_av, y),
-                     config[material]['average'][direct])
-    dif = residual(raman, x_av, y)
+    sol = config[material]['average'][direct]
+    y = np.array(tbl[dset]['#Intensity'])[config[material]['frame']]
+    sol, h = leastsq(residual(raman, x, y),
+                     sol)
+    dif = residual(raman, x, y)
     print(f"For {dset} deg.: {dif(sol).dot(dif(sol))}")
 
     ix = 0
     # Main resgd fitter
     M = config[material]['M']['init']
     while len(sol)/3 < config[material]['init']:
-        gd = (gdev(r, M)**2 + gav(r, M)**2)
-        resgd = residual(raman, x_av, y, 1/gd)
-        p = xpeak(x_av, gd, max(gd), max(gd)/2)
-        hmhw = abs(x_av[p[0]] - x_av[p[-1]])/2
+        # gd = (gdev(r, M)**2 + gav(r, M)**2)
+        resgd = residual(raman, x, y, 1/gd)
+        p = xpeak(x, gd, max(gd), max(gd)/2)
+        fwhm = abs(x[p[0]] - x[p[-1]])/2
         Amp = r[p[1]]
-        x0 = (x_av[p[0]]+x_av[p[-1]])/2
-        v = [abs(Amp), hmhw, x0]
+        x0 = (x[p[0]]+x[p[-1]])/2
+        v = [abs(Amp), fwhm, x0]
         sol = list(sol)
-        sol += [Amp, hmhw, x0]
+        sol += [Amp, fwhm, x0]
         sol, h = leastsq(dif, sol)
         r = dif(sol)
         print(f"{int(len(sol)/3)}: {percentage(r.dot(r), y.dot(y))}")
 
     M = config[material]['M']['final']
     while len(sol)/3 < config[material]['count']:
-        gd = (gdev(r, M)**2 + gav(r, M)**2)
-        resgd = residual(raman, x_av, y, 1/gd)
-        p = xpeak(x_av, gd, max(gd), max(gd)/2)
-        hmhw = abs(x_av[p[0]] - x_av[p[-1]])/2
+        # gd = (gdev(r, M)**2 + gav(r, M)**2)
+        resgd = residual(raman, x, y, 1/gd)
+        p = xpeak(x, gd, max(gd), max(gd)/2)
+        fwhm = abs(x[p[0]] - x[p[-1]])/2
         Amp = r[p[1]]
-        x0 = (x_av[p[0]]+x_av[p[-1]])/2
-        v = [abs(Amp), hmhw, x0]
+        x0 = (x[p[0]]+x[p[-1]])/2
+        v = [abs(Amp), fwhm, x0]
         sol = list(sol)
-        sol += [Amp, hmhw, x0]
+        sol += [Amp, fwhm, x0]
         sol, h = leastsq(dif, sol)
         r = dif(sol)
         print(f"{int(len(sol)/3)}: {percentage(r.dot(r), y.dot(y))}")
@@ -538,8 +682,13 @@ for dset in tbl.keys():
         surface = []
         active = []
         for n in range(0, len(sol)-1, 3):
-            surface += [np.log10(abs(sol[n]*sol[n+1]))]
-            active += [np.log10(abs(sum(lorentz(sol[n:n+3], x_av)*d(x_av))))]
+            surface += [np.log10(np.pi*abs(sol[n]*sol[n+1]))]
+            active += [np.log10(abs(sum(lorentz(sol[n:n+3], x)*d(x))))]
+            # and special thanks to that lorentz which is super thin and high
+            if active[-1] > surface[-1] and min(x) <= sol[n+2] <= max(x):
+                # please don't come back
+                active[-1] = surface[-1]
+                # you make me nervous
         surface = np.array(surface)
         active = np.array(active)
 
@@ -598,6 +747,8 @@ for dset in tbl.keys():
                 print(f"Trimmed: index {n}")
         new_req = np.array(new_req)
         sol = sol[new_req]
+        # if (False not in requirement and
+        #     len(sol)/3 == config[material]['count']):
         if False not in requirement:
             print("No trimming")
             break
@@ -606,52 +757,26 @@ for dset in tbl.keys():
 
 
 # %%
-# Chosen peak plotter
-
-def simple_compnts(sol, comp_nr=0):
-    if comp_nr not in [0, 1, 2]:
-        raise ValueError("Invalid argument comp_nr, proper values include 0, 1"
-                         " or 2")
-    return sol[comp_nr::3]
-
-
-def compnts(sol_set, comp_nr=0):
-    return [simple_compnts(s, comp_nr) for s in sol_set]
-
-
-def gauss(t):
-    return 1/(2*np.pi)**0.5 * np.exp(-0.5*(t)**2)
-
-
-def av_param(value, param, xn, k):
-    param = np.array(param)
-    xn = np.array(xn)
-    gaussian = 1/k * gauss((xn - value)/k)
-    gaussian /= sum(gaussian)
-    return sum(gaussian*param)
-
-
-sols = config[material]['solutions']['VH']
-
-peak_nr = 36
-
-# Peak selection
-k = 10
-band = 1540
-amp = av_param(band, np.abs(compnts(sols, 0)[peak_nr]), compnts(sols, 2)[peak_nr], k)
-w = av_param(band, np.abs(compnts(sols, 1)[peak_nr]), compnts(sols, 2)[peak_nr], k)
-x0 = av_param(band, np.abs(compnts(sols, 2)[peak_nr]), compnts(sols, 2)[peak_nr], k)
-sol_av = [amp, w, x0]
-
-sol = sols[peak_nr]
-y = np.array(tbl[f'#{peak_nr}']['#Intensity'])
+# All data comparison
+print("Plotting...")
+sols = config[material]['solutions'][direct]
 
 # Create figure
 fig = pgo.Figure()
 fig.layout.template = plotly_global
 
+trace_count = []
+
+bands = config[material]['bands']
+ixs_all = []
 for ns, sol in enumerate(sols[:]):
     y = np.array(tbl[f'#{ns}']['#Intensity'])
+    # ix = next(nearest_val(simple_compnts(sol, 2), 1590))
+    # amp = simple_compnts(sol, 0)[ix]
+    # w = simple_compnts(sol, 1)[ix]
+    # x0 = simple_compnts(sol, 2)[ix]
+
+    # sol_av = [amp, w, x0]
     # Basic traces (always visible)
     traces = [
         {
@@ -663,7 +788,7 @@ for ns, sol in enumerate(sols[:]):
                 'color': 'white'
             },
             'visible': False,
-            'x': x_av,
+            'x': x,
             'y': y
         },
         {
@@ -675,67 +800,64 @@ for ns, sol in enumerate(sols[:]):
                 'color': 'cyan'
             },
             'visible': False,
-            'x': x_av,
-            'y': raman(sol, x_av)
+            'x': x,
+            'y': raman(sol, x)
         },
-        {
-            'name': 'choice',
-            'type': 'scatter',
-            'mode': 'lines',
-            'line': {
-                'width': 1,
-                'color': 'yellow'
-            },
-            'visible': False,
-            'x': x_av,
-            'y': lorentz(sol_av, x_av)
-        },
-        {
-            'name': 'choice curve',
-            'type': 'scatter',
-            'mode': 'lines',
-            'line': {
-                'width': 1,
-                'color': 'magenta'
-            },
-            'visible': False,
-            'x': x_av,
-            'y': 1/k * gauss((x_av - band)/k) * 50000
-        }
+        # {
+        #     'name': 'choice',
+        #     'type': 'scatter',
+        #     'mode': 'lines',
+        #     'line': {
+        #         'width': 1,
+        #         'color': 'yellow'
+        #     },
+        #     'visible': False,
+        #     'x': x,
+        #     'y': lorentz(sol_av, x)
+        # }
     ]
-
+    ixs = []
+    for band in bands:
+        ix = next(nearest_val(simple_compnts(sol, 2), band))
+        amp = simple_compnts(sol, 0)[ix]
+        w = simple_compnts(sol, 1)[ix]
+        x0 = simple_compnts(sol, 2)[ix]
+        ixs.append(ix)
+    ixs_all.append(ixs)
     for nr, s in enumerate([sol[n:n+3] for n in range(0, len(sol)-1, 3)]):
-        traces += [
-            {
-                'visible': False,
-                'text': f'A:{s[0]}\nw:{s[1]}\nx:{s[2]}',
-                'line': {
-                    'width': 1,
-                    'color': 'white'
-                },
-                'name': f'Comp. #{nr}',
-                'x': x_av,
-                'y': lorentz(s, x_av)
-            }
-        ]
+        comp_trace = {
+            'visible': False,
+            'text': f'A:{s[0]}\nw:{s[1]}\nx:{s[2]}',
+            'line': {
+                'width': 0.1,
+                'color': 'white'
+            },
+            'name': f'Comp. #{nr}',
+            'x': x,
+            'y': lorentz(s, x)
+        }
+        if nr in ixs:
+            comp_trace['line']['width'] = 1
+        traces += [comp_trace]
     for trace in traces:
         fig.add_trace(trace)
-print(len(fig.data))
-# Make some traces visible
-for n in range(19):
+    trace_count.append(len(traces))
+# Make first traces visible
+for n in range(trace_count[0]):
     fig.data[n].visible = True
-
 # Create and add slider
 steps = []
-for i in range(0, int(len(fig.data)/19), 1):
+for i in range(0, len(trace_count), 1):
     step = {
         'method': 'update',
         'args': [
             {'visible': [False]*len(fig.data)},
-            {'title': f'Angle {i*10} deg.'}
+            {'title': f'{config[material]["fullname"]} {direct}'
+                      f' @ Angle {i*10} deg.'}
         ]
     }
-    for m in range(i*19, (i+1)*19, 1):
+    for m in range(sum(trace_count[:i]), sum(trace_count[:i+1]), 1):
+        # print()
         step["args"][0]["visible"][m] = True
     steps.append(step)
 
@@ -746,42 +868,168 @@ sliders = [{
     'steps': steps
 }]
 
-fig.update_layout(
-    sliders=sliders
-)
 
-fig.show()
+layout = {
+    'title': f'{config[material]["fullname"]} {direct}'
+}
+
+pltconf = {
+    'modeBarButtonsToAdd': [
+        'drawline',
+        'drawopenpath',
+        'drawclosedpath',
+        'drawcircle',
+        'drawrect',
+        'eraseshape'
+    ]
+}
+
+fig.update_layout(layout, sliders=sliders)
+fig.update_yaxes(range=[0, 1.1*max(y_av+3*y_stdev)])
+
+fig.show(config=pltconf)
+
 
 # %%
+# Polar of selected band
+print("Band polar plotting...")
 fig_polar = pgo.Figure()
 fig_polar.layout.template = plotly_global
 
-k = 10
-band = 1540
-sol_band = []
-for n in range(37):
-    y = np.array(tbl[f'#{n}']['#Intensity'])
-    # amp = av_param(band, np.abs(compnts(sols, 0)[n]), compnts(sols, 2)[n], k)
-    # w = av_param(band, np.abs(compnts(sols, 1)[n]), compnts(sols, 2)[n], k)
-    # x0 = av_param(band, np.abs(compnts(sols, 2)[n]), compnts(sols, 2)[n], k)
-    amp = y[next(nearest_val(x_av, 1582))]-10000
-    w = 5
-    x0 = 1593.8
-    sol_band.append([amp, w, x0])
-
+traces = []
 traces = [
     {
-        'name': 'intensity',
+        'name': f'Band {round(simple_compnts(sols[0], 2)[ixs_all[0][nr]], 2)}',
         'type': 'scatterpolar',
         'mode': 'markers',
         'marker': {
             'size': 5,
         },
         'theta': [theta for theta in range(0, 370, 10)],
-        'r': [sol_band[n][0]*sol_band[n][1]-51000 for n in range(37)]
+        'r': [abs(simple_compnts(sols[n], 0)[ixs_all[n][nr]] *
+                  simple_compnts(sols[n], 1)[ixs_all[n][nr]])
+              for n in range(len(sols))]
+    } for nr, band in enumerate(bands)
+]
+
+layout = {
+    'title': 'Polar intensity of peaks (not normalised)'
+}
+
+pltconf = {
+    'modeBarButtonsToAdd': [
+        'drawline',
+        'drawopenpath',
+        'drawclosedpath',
+        'drawcircle',
+        'drawrect',
+        'eraseshape'
+    ]
+}
+
+fig_polar.add_traces(traces)
+fig_polar.update_layout(layout)
+fig_polar.show(config=pltconf)
+
+# %%
+
+
+# def transform(kernel, u, v):
+#     u = np.array(u)
+#     v = np.array(v)
+#     return (sum(v*kernel(u-ui)) for ui in u)
+
+
+# def kernel_gen(kernel, params):
+#     return lambda t: kernel(params, t)/sum(kernel(params, t))
+
+
+# def window(cutoff, center, width):
+#     return lambda slt: (np.exp(cutoff*np.array(slt) - center - width/2) +
+#                         np.exp(-cutoff*np.array(slt) + center + width/2))
+
+
+# u, v = x, y_stdev
+
+
+# def dif_plus(slt):
+#     amps = np.array(simple_compnts(slt, 0))
+#     fwhm = np.array(simple_compnts(slt, 1))
+#     xpos = np.array(simple_compnts(slt, 2))
+#     return residual(raman, u, v)(slt)
+
+
+# dif = residual(raman, u, v)
+# r = dif([1, 1, 0])
+
+# sol = []
+
+# while 100*r.dot(r)/v.dot(v) > 0.05:
+#     rk = [ri for ri in transform(kernel_gen(lorentz, [1, 1000, 0]), u, r)]
+#     ix_max = np.array(range(len(r)))[r == max(r)][0]
+#     pos = np.array(xpeak(u, r, r[ix_max], (r[ix_max]+rk[ix_max])/2))
+#     plt.plot(u[pos], v[pos], '.', ms=5)
+#     plt.plot(u, v, '.', ms=0.7)
+#     Amp = r[ix_max] - rk[ix_max]
+#     fwhm = u[pos][2]-u[pos][0]
+#     x0 = u[pos][1]
+#     plt.plot(u, lorentz([Amp, fwhm, x0], u), '-', lw=0.7)
+#     plt.plot(u, dif(sol), '.', ms=0.7)
+#     sol += [Amp, fwhm, x0]
+#     sol, h = leastsq(dif, sol)
+#     sol = list(sol)
+#     r = dif(sol)
+#     print(percentage(r.dot(r), v.dot(v)))
+#     plt.show()
+
+# plt.plot(u, v, '.', ms=0.7)
+# plt.plot(u, raman(sol, u), '-', lw=0.7)
+# for nr in range(0, len(sol)-1, 3):
+#     plt.plot(u, lorentz([sol[nr], sol[nr+1], sol[nr+2]], u), lw=0.1)
+# plt.show()
+# %%
+frame = config[material]['frame']
+x = x_av[config[material]['frame']]
+y = y_av[config[material]['frame']]
+
+fig = pgo.Figure()
+fig.layout.template = plotly_global
+
+traces = [
+    {
+        'name': 'average',
+        'type': 'scatter',
+        'mode': 'markers',
+        'marker': {
+            'size': 1
+        },
+        'x': x,
+        'y': y
+    },
+    {
+        'name': 'stdev',
+        'type': 'scatter',
+        'mode': 'markers',
+        'marker': {
+            'size': 1
+        },
+        'x': x,
+        'y': y_stdev[frame]
     }
 ]
 
-fig_polar.add_traces(traces)
+pltconf = {
+    'modeBarButtonsToAdd': [
+        'drawline',
+        'drawopenpath',
+        'drawclosedpath',
+        'drawcircle',
+        'drawrect',
+        'eraseshape'
+    ]
+}
 
-fig_polar.show()
+for trace in traces:
+    fig.add_trace(trace)
+fig.update_layout({'title': "Is this some reebok or some nike"})
+fig.show(comfig=pltconf)

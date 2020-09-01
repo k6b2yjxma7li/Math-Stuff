@@ -232,7 +232,7 @@ def xpeak(x_data, y_data, top_value, min_level):
     ---
     + `x_data`: array -- x-data
     + `y_data`: array -- y-data
-    + `top_position`: float -- index of peak
+    + `top_value`: float -- value of peak
     + `min_level`: float -- minimal level, where peak has it's bottom
 
     Returns

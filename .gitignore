@@ -1,3 +1,4 @@
+.gitignore
 notatka
 # Rozszerzenia plików, które nie mają być gitowane
 *.csv
@@ -9,3 +10,5 @@ notatka
 .*
 __pycache__
 TODO
+tmp*
+*.ipynb

@@ -185,6 +185,31 @@ def residual(func, x, y, penalty=None):
 
 
 def lorentz(v, t):
+    """`lorentz`
+    ---
+    Lorentz function (bell curve). Amplitude is absolutised (emission peak)
+
+    u = abs(Amp)/(1 + ((t - x)/w)**2)
+
+    Amp -- v[0]
+
+    w -- v[1]
+
+    x -- v[2]
+
+    Parameters
+    ----------
+    v : `array`
+        3-vector of Amplitude, width and x-position
+
+    t : `array`
+        x arguments to this function
+
+    Returns
+    -------
+    `array`
+        Result of height
+    """
     t = np.array(t)
     return abs(v[0])/(1+((t-v[2])/v[1])**2)
 
