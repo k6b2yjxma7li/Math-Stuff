@@ -538,10 +538,10 @@ for trace in traces1:
         fig.add_trace(trace, row=1, col=1, secondary_y=False)
 
 for trace in traces2:
-    if 'yaxis' in trace:
-        fig.add_trace(trace, row=2, col=1)
-    else:
-        fig.add_trace(trace, row=2, col=1)
+    # if 'yaxis' in trace:
+    fig.add_trace(trace, row=2, col=1)
+    # else:
+        # fig.add_trace(trace, row=2, col=1)
 fig.update_layout(layout)
 
 fig.show(config=pltconf)
@@ -771,12 +771,7 @@ bands = config[material]['bands']
 ixs_all = []
 for ns, sol in enumerate(sols[:]):
     y = np.array(tbl[f'#{ns}']['#Intensity'])
-    # ix = next(nearest_val(simple_compnts(sol, 2), 1590))
-    # amp = simple_compnts(sol, 0)[ix]
-    # w = simple_compnts(sol, 1)[ix]
-    # x0 = simple_compnts(sol, 2)[ix]
 
-    # sol_av = [amp, w, x0]
     # Basic traces (always visible)
     traces = [
         {
@@ -802,19 +797,7 @@ for ns, sol in enumerate(sols[:]):
             'visible': False,
             'x': x,
             'y': raman(sol, x)
-        },
-        # {
-        #     'name': 'choice',
-        #     'type': 'scatter',
-        #     'mode': 'lines',
-        #     'line': {
-        #         'width': 1,
-        #         'color': 'yellow'
-        #     },
-        #     'visible': False,
-        #     'x': x,
-        #     'y': lorentz(sol_av, x)
-        # }
+        }
     ]
     ixs = []
     for band in bands:
