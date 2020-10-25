@@ -209,7 +209,11 @@ y_stdev /= ctr
 y_stdev = (y_stdev - y_av**2)**0.5
 x_av /= ctr
 
-print("\tDone")
+print("\tDone:")
+print(f"Material: {config[material]['fullname']}")
+print(f"Direction: {direct}")
+print(f"From 20{day[:2]}-{day[2:4]}-{day[4:6]}")
+
 # %%
 # Main resgd fitter
 
@@ -835,17 +839,17 @@ for ns, sol in enumerate(sols[:]):
     sol_cp = sol.copy()
     sol_ix = np.arange(int(len(sol)/3)) # keeping track of real ix
     # instead of dropped-element array ix-es
-    threshold = 0.95
+    threshold = 0.9
     for band in bands:
         ix = next(nearest_val(simple_compnts(sol_cp, 2), band))
         # making sure no over-the-top bands are selected
         # (selected - band) < 2*width 
-        w = sol_cp[ix+1]
-        x0 = sol_cp[ix+2]
+        w = simple_compnts(sol_cp, 1)[ix]
+        x0 = simple_compnts(sol_cp, 2)[ix]
         # 0.95 here is intensity threshold, where spectral line is considered
         # out of band
-        if ((band - sol[ix+2])/(sol[ix+1]) > np.tan(threshold * (np.pi/4))
-            or band * threshold < sol[ix+2] < band*(2-threshold)):
+        # if ((band - x0)/abs(w) > np.tan(threshold * (np.pi/4))):
+        if abs(band - x0) > 5*abs(w) and 5*abs(w) > abs(np.mean(np.diff(x_av))):
             continue
         # selecting preceding ix-s removed and using this as ix shift
         # dropping elements already selected (no double selection)
@@ -939,7 +943,7 @@ traces = [
         'r': [abs(simple_compnts(sols[n], 0)[ixs_all[n][nr]] *
                   simple_compnts(sols[n], 1)[ixs_all[n][nr]])
               for n in range(len(sols))]
-    } for nr, band in enumerate(ixs)
+    } for nr in range(len(min(ixs_all, key=lambda arr: len(arr))))
 ]
 
 layout = {
