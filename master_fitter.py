@@ -850,6 +850,8 @@ for ns, sol in enumerate(sols[:]):
         # out of band
         # if ((band - x0)/abs(w) > np.tan(threshold * (np.pi/4))):
         if abs(band - x0) > 5*abs(w) and 5*abs(w) > abs(np.mean(np.diff(x_av))):
+            # selection rules for bands might be changed in next iterations
+            # this one is not final
             continue
         # selecting preceding ix-s removed and using this as ix shift
         # dropping elements already selected (no double selection)
