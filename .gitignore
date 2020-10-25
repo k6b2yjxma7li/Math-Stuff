@@ -1,11 +1,13 @@
 .gitignore
 notatka
+Untitled.*
 # Rozszerzenia plików, które nie mają być gitowane
 *.csv
 .data
 *.png
 *.svg
 *.jp*g
+*.html
 # for hidden files
 .*
 __pycache__

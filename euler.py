@@ -42,7 +42,7 @@ def R_psi(psi):
 
 # # %%
 # Incident light wave vector
-k = np.array([1, -0.5, -1])
+k = np.array([0, 0, -1])
 
 phi, theta, psi = k_vec(*k)
 
@@ -88,17 +88,28 @@ Em_x = []
 Em_y = []
 Em_z = []
 
+Es_xp = []
+Es_yp = []
+Es_zp = []
+
 nfold = 36
 
 txt = []
 
 for n in range(nfold):
+    # dla tesnora E2g należy wziąć sumę intensywności z obu tensorów
     txt.append(f"{10*n} deg.")
     E = np.array([np.cos(2*np.pi/nfold * n),
                   np.sin(2*np.pi/nfold * n),
                   0])
-    E = R_i.dot(E)*(k.dot(k))**0.5
-    Es = tensor_rotz.dot(mode[curr_mode]).dot(E)
+    E = R_i.dot(E)*(k.dot(k))**0.5 # incident polarization vector
+    if mode == 'E2g1':
+        Es1 = tensor_rotz.dot(mode['E2g2']).dot(E) # response polarization vector
+        Em += abs(uni.dot(tensor_rotz.dot(mode['E2g2']).dot(E)))**2
+    if mode == 'E2g2':
+        Es1 = tensor_rotz.dot(mode['E2g1']).dot(E) # response polarization vector
+        Em += abs(uni.dot(tensor_rotz.dot(mode['E2g1']).dot(E)))**2
+    Es = tensor_rotz.dot(mode[curr_mode]).dot(E) # response polarization vector
     if p_type == 'VV':
         uni = R_i.dot(np.array([np.cos(2*np.pi/nfold * n),
                                 np.sin(2*np.pi/nfold * n),
@@ -109,6 +120,16 @@ for n in range(nfold):
                                 np.cos(2*np.pi/nfold * n),
                                 0]))
         Em = abs(uni.dot(Es))**2 * E/(E.dot(E))
+    
+    if curr_mode == 'E2g1':
+        Em += abs(uni.dot(tensor_rotz.dot(mode['E2g2']).dot(E)))**2
+    if curr_mode == 'E2g2':
+        Em += abs(uni.dot(tensor_rotz.dot(mode['E2g1']).dot(E)))**2
+
+    if curr_mode in ['E2g1', 'E2g2']:
+        Es_xp.append(Es[0])
+        Es_yp.append(Es[1])
+        Es_zp.append(Es[2])
 
     Es_x.append(Es[0])
     Es_y.append(Es[1])
@@ -314,10 +335,11 @@ traces = [
         'z': Em_z,
         'text': txt,
         'type': 'scatter3d',
-        'mode': 'markers',
-        'marker': {
+        'mode': 'lines',
+        'line': {
             'color': 'magenta',
-            'size': 3
+            # 'size': 3
+            'width': 2
         },
         'name': 'measured field'
     }
@@ -354,5 +376,3 @@ fig.add_traces(traces)
 fig.update_layout(layout)
 
 fig.show()
-
-# %%

@@ -95,7 +95,6 @@ def window(cutoff, center, width):
     return lambda slt: (np.exp(cutoff*np.array(slt) - center - width/2) +
                         np.exp(-cutoff*np.array(slt) + center + width/2))
 
-
 # %%
 # Configuration
 config = {
@@ -141,14 +140,42 @@ config = {
             'VV': []
         }
     },
+    'si': {
+        'fullname': 'Silicon',
+        'init': 5,
+        'count': 15,
+        'day': '200924',
+        'bands': [520, 520, 520],
+        'frame': slice(0, -1),
+        'measure': 'polar_si',
+        'M': {
+            'init': 5,
+            'final': 5
+        },
+        'solutions': {
+            'VH': [],
+            'VV': []
+        },
+        'average': {
+            'VH': [],
+            'VV': []
+        }
+    },
     'figsave': False
 }
 
 # %%
 # Data loading and preparations
 print("Data loading...", end="")
-material = 'grf'
-direct = 'VV'
+material = 'si'
+if '--direction' in sys.argv:
+    dix = sys.argv.index('--direction')
+    direct = sys.argv[dix+1]
+elif '-d' in sys.argv:
+    dix = sys.argv.index('-d')
+    direct = sys.argv[dix+1]
+else:
+    direct = 'VV'
 
 measure = config[material]['measure']
 day = config[material]['day']
@@ -162,11 +189,12 @@ for n in range(len(files)):
     if ".txt" in files[n]:
         datafiles += [files[n]]
         dataset = re.findall(r"\d\d\d(?=[A-Z]{2})", files[n])
-        tdict.update({int(dataset[0]): dataset[0]})
+        tdict.update({n: dataset[0]})
 for nr, name in enumerate(datafiles):
     name = os.path.join(path, name)
-    tbl += {tdict[10*nr]: table().read_csv(open(name, 'r'), delim=r",")}
+    tbl += {tdict[nr]: table().read_csv(open(name, 'r'), delim=r",|\t{1,}")}
 datafiles = dict(zip(tdict.keys(), datafiles))
+tbl = tbl.sort()
 y_av = 0
 y_stdev = 0
 ctr = 0
@@ -193,7 +221,7 @@ sol = []
 # Fitting with stdev
 u, v = x_av[config[material]['frame']], y_stdev[config[material]['frame']]
 
-
+# To be used later
 # def dif_plus(slt):
 #     amps = np.array(simple_compnts(slt, 0))
 #     fwhm = np.array(simple_compnts(slt, 1))
@@ -205,24 +233,24 @@ dif = residual(raman, u, v)
 r = dif([1, 1, 0])
 
 sol = []
-
-while 100*r.dot(r)/v.dot(v) > 0.5:
-    # plt.plot(len(sol), np.log(100*r.dot(r)/v.dot(v)), '.', ms=0.7)
-    rk = [ri for ri in transform(kernel_gen(lorentz, [1, 1000, 0]), u, r)]
-    ix_max = np.array(range(len(r)))[r == max(r)][0]
-    pos = np.array(xpeak(u, r, r[ix_max], (r[ix_max]+rk[ix_max])/2))
-    Amp = r[ix_max] - rk[ix_max]
-    fwhm = u[pos][2]-u[pos][0]
-    x0 = u[pos][1]
-    sol += [Amp, fwhm, x0]
-    sol, h = leastsq(dif, sol)
-    sol = list(sol)
-    r = dif(sol)
-    print(f"{int(len(sol)/3)}: {percentage(r.dot(r), v.dot(v))}")
-    plt.plot(u, v, '.', ms=0.7)
-    plt.plot(u, r, '.', ms=0.7)
-    plt.plot(u, lorentz(sol[-3:], u), lw=0.7)
-    plt.show()
+# To be used later
+# while 100*r.dot(r)/v.dot(v) > 0.5:
+#     # plt.plot(len(sol), np.log(100*r.dot(r)/v.dot(v)), '.', ms=0.7)
+#     rk = [ri for ri in transform(kernel_gen(lorentz, [1, 1000, 0]), u, r)]
+#     ix_max = np.array(range(len(r)))[r == max(r)][0]
+#     pos = np.array(xpeak(u, r, r[ix_max], (r[ix_max]+rk[ix_max])/2))
+#     Amp = r[ix_max] - rk[ix_max]
+#     fwhm = u[pos][2]-u[pos][0]
+#     x0 = u[pos][1]
+#     sol += [Amp, fwhm, x0]
+#     sol, h = leastsq(dif, sol)
+#     sol = list(sol)
+#     r = dif(sol)
+#     print(f"{int(len(sol)/3)}: {percentage(r.dot(r), v.dot(v))}")
+#     # plt.plot(u, v, '.', ms=0.7)
+#     # plt.plot(u, r, '.', ms=0.7)
+#     # plt.plot(u, lorentz(sol[-3:], u), lw=0.7)
+#     # plt.show()
 
 print("Average model fitting... ", end="")
 
@@ -242,7 +270,7 @@ def resg_gen(fn, u, v, w):
 M = config[material]['M']['init']
 while len(sol)/3 < config[material]['init']:
     gd = (gdev(r, M)**2 + gav(r, M)**2)
-    # resgd = residual(raman, x, y, 1/gd)
+    # haha resgd = residual(raman, x, y, 1/gd)
     p = xpeak(x, gd, max(gd), max(gd)/2)
     fwhm = abs(x[p[0]] - x[p[-1]])/2
     Amp = r[p[1]]
@@ -257,7 +285,7 @@ while len(sol)/3 < config[material]['init']:
 M = config[material]['M']['final']
 while len(sol)/3 < config[material]['count']:
     gd = (gdev(r, M)**2 + gav(r, M)**2)
-    # resgd = residual(raman, x, y, 1/gd)
+    # haha resgd = residual(raman, x, y, 1/gd)
     p = xpeak(x, gd, max(gd), max(gd)/2)
     fwhm = abs(x[p[0]] - x[p[-1]])/2
     Amp = r[p[1]]
@@ -368,7 +396,6 @@ while True:
         print("No trimming")
         break
     ix += 1
-
 config[material]['average'][direct] = sol.copy()
 if '--show' in sys.argv:
     plt.show()
@@ -543,8 +570,10 @@ for trace in traces2:
     # else:
         # fig.add_trace(trace, row=2, col=1)
 fig.update_layout(layout)
+if '--show' in sys.argv:
+    fig.show(config=pltconf)
 
-fig.show(config=pltconf)
+fig.write_html(f"./model_av_{material}_{direct}.html")
 
 fig = psp.make_subplots()
 
@@ -628,8 +657,10 @@ for trace in traces:
     fig.add_trace(trace, row=1, col=1)
 
 fig.update_layout(layout)
+if '--show' in sys.argv:
+    fig.show(config=pltconf)
 
-fig.show(config=pltconf)
+fig.write_html(f"./model_err_{material}_{direct}.html")
 
 # %%
 # Proper logic (fitting all data sets)
@@ -648,7 +679,7 @@ for dset in tbl.keys():
     # Main resgd fitter
     M = config[material]['M']['init']
     while len(sol)/3 < config[material]['init']:
-        # gd = (gdev(r, M)**2 + gav(r, M)**2)
+        # haha gd = (gdev(r, M)**2 + gav(r, M)**2)
         resgd = residual(raman, x, y, 1/gd)
         p = xpeak(x, gd, max(gd), max(gd)/2)
         fwhm = abs(x[p[0]] - x[p[-1]])/2
@@ -663,7 +694,7 @@ for dset in tbl.keys():
 
     M = config[material]['M']['final']
     while len(sol)/3 < config[material]['count']:
-        # gd = (gdev(r, M)**2 + gav(r, M)**2)
+        # haha gd = (gdev(r, M)**2 + gav(r, M)**2)
         resgd = residual(raman, x, y, 1/gd)
         p = xpeak(x, gd, max(gd), max(gd)/2)
         fwhm = abs(x[p[0]] - x[p[-1]])/2
@@ -799,14 +830,32 @@ for ns, sol in enumerate(sols[:]):
             'y': raman(sol, x)
         }
     ]
+    # bands selection mechanism
     ixs = []
+    sol_cp = sol.copy()
+    sol_ix = np.arange(int(len(sol)/3)) # keeping track of real ix
+    # instead of dropped-element array ix-es
+    threshold = 0.95
     for band in bands:
-        ix = next(nearest_val(simple_compnts(sol, 2), band))
-        amp = simple_compnts(sol, 0)[ix]
-        w = simple_compnts(sol, 1)[ix]
-        x0 = simple_compnts(sol, 2)[ix]
-        ixs.append(ix)
+        ix = next(nearest_val(simple_compnts(sol_cp, 2), band))
+        # making sure no over-the-top bands are selected
+        # (selected - band) < 2*width 
+        w = sol_cp[ix+1]
+        x0 = sol_cp[ix+2]
+        # 0.95 here is intensity threshold, where spectral line is considered
+        # out of band
+        if ((band - sol[ix+2])/(sol[ix+1]) > np.tan(threshold * (np.pi/4))
+            or band * threshold < sol[ix+2] < band*(2-threshold)):
+            continue
+        # selecting preceding ix-s removed and using this as ix shift
+        # dropping elements already selected (no double selection)
+        ix_real = sol_ix[ix]
+        sol_ix = np.delete(sol_ix, ix)
+        for n in range(3):
+            sol_cp = np.delete(sol_cp, 3*ix)
+        ixs.append(ix_real)    # real ix-s
     ixs_all.append(ixs)
+
     for nr, s in enumerate([sol[n:n+3] for n in range(0, len(sol)-1, 3)]):
         comp_trace = {
             'visible': False,
@@ -840,7 +889,6 @@ for i in range(0, len(trace_count), 1):
         ]
     }
     for m in range(sum(trace_count[:i]), sum(trace_count[:i+1]), 1):
-        # print()
         step["args"][0]["visible"][m] = True
     steps.append(step)
 
@@ -850,7 +898,6 @@ sliders = [{
     'pad': {'t': 10},
     'steps': steps
 }]
-
 
 layout = {
     'title': f'{config[material]["fullname"]} {direct}'
@@ -869,17 +916,17 @@ pltconf = {
 
 fig.update_layout(layout, sliders=sliders)
 fig.update_yaxes(range=[0, 1.1*max(y_av+3*y_stdev)])
+if '--show' in sys.argv:
+    fig.show(config=pltconf)
 
-fig.show(config=pltconf)
-
-
+fig.write_html(f"./full_plot_{material}_{direct}.html")
 # %%
 # Polar of selected band
 print("Band polar plotting...")
 fig_polar = pgo.Figure()
 fig_polar.layout.template = plotly_global
+print(ixs_all)
 
-traces = []
 traces = [
     {
         'name': f'Band {round(simple_compnts(sols[0], 2)[ixs_all[0][nr]], 2)}',
@@ -892,7 +939,7 @@ traces = [
         'r': [abs(simple_compnts(sols[n], 0)[ixs_all[n][nr]] *
                   simple_compnts(sols[n], 1)[ixs_all[n][nr]])
               for n in range(len(sols))]
-    } for nr, band in enumerate(bands)
+    } for nr, band in enumerate(ixs)
 ]
 
 layout = {
@@ -912,107 +959,9 @@ pltconf = {
 
 fig_polar.add_traces(traces)
 fig_polar.update_layout(layout)
-fig_polar.show(config=pltconf)
+if '--show' in sys.argv:
+    fig_polar.show(config=pltconf)
 
+fig_polar.write_html(f"./polar_{material}_{direct}.html")
 # %%
-
-
-# def transform(kernel, u, v):
-#     u = np.array(u)
-#     v = np.array(v)
-#     return (sum(v*kernel(u-ui)) for ui in u)
-
-
-# def kernel_gen(kernel, params):
-#     return lambda t: kernel(params, t)/sum(kernel(params, t))
-
-
-# def window(cutoff, center, width):
-#     return lambda slt: (np.exp(cutoff*np.array(slt) - center - width/2) +
-#                         np.exp(-cutoff*np.array(slt) + center + width/2))
-
-
-# u, v = x, y_stdev
-
-
-# def dif_plus(slt):
-#     amps = np.array(simple_compnts(slt, 0))
-#     fwhm = np.array(simple_compnts(slt, 1))
-#     xpos = np.array(simple_compnts(slt, 2))
-#     return residual(raman, u, v)(slt)
-
-
-# dif = residual(raman, u, v)
-# r = dif([1, 1, 0])
-
-# sol = []
-
-# while 100*r.dot(r)/v.dot(v) > 0.05:
-#     rk = [ri for ri in transform(kernel_gen(lorentz, [1, 1000, 0]), u, r)]
-#     ix_max = np.array(range(len(r)))[r == max(r)][0]
-#     pos = np.array(xpeak(u, r, r[ix_max], (r[ix_max]+rk[ix_max])/2))
-#     plt.plot(u[pos], v[pos], '.', ms=5)
-#     plt.plot(u, v, '.', ms=0.7)
-#     Amp = r[ix_max] - rk[ix_max]
-#     fwhm = u[pos][2]-u[pos][0]
-#     x0 = u[pos][1]
-#     plt.plot(u, lorentz([Amp, fwhm, x0], u), '-', lw=0.7)
-#     plt.plot(u, dif(sol), '.', ms=0.7)
-#     sol += [Amp, fwhm, x0]
-#     sol, h = leastsq(dif, sol)
-#     sol = list(sol)
-#     r = dif(sol)
-#     print(percentage(r.dot(r), v.dot(v)))
-#     plt.show()
-
-# plt.plot(u, v, '.', ms=0.7)
-# plt.plot(u, raman(sol, u), '-', lw=0.7)
-# for nr in range(0, len(sol)-1, 3):
-#     plt.plot(u, lorentz([sol[nr], sol[nr+1], sol[nr+2]], u), lw=0.1)
-# plt.show()
-# %%
-frame = config[material]['frame']
-x = x_av[config[material]['frame']]
-y = y_av[config[material]['frame']]
-
-fig = pgo.Figure()
-fig.layout.template = plotly_global
-
-traces = [
-    {
-        'name': 'average',
-        'type': 'scatter',
-        'mode': 'markers',
-        'marker': {
-            'size': 1
-        },
-        'x': x,
-        'y': y
-    },
-    {
-        'name': 'stdev',
-        'type': 'scatter',
-        'mode': 'markers',
-        'marker': {
-            'size': 1
-        },
-        'x': x,
-        'y': y_stdev[frame]
-    }
-]
-
-pltconf = {
-    'modeBarButtonsToAdd': [
-        'drawline',
-        'drawopenpath',
-        'drawclosedpath',
-        'drawcircle',
-        'drawrect',
-        'eraseshape'
-    ]
-}
-
-for trace in traces:
-    fig.add_trace(trace)
-fig.update_layout({'title': "Is this some reebok or some nike"})
-fig.show(comfig=pltconf)
+print("All done.")

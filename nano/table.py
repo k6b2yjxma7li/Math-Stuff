@@ -103,12 +103,25 @@ class table:
     def retype(self, cell_key, dtype):
         self[cell_key] = dtype(self[cell_key])
 
-    def read_csv(self, file_stream, delim=r"\t{1,}", is_header=True):
+    def sort(self, key=lambda x: x, reverse=False):
+        new_keys = sorted(list(self.__dict_.keys()), key=key, reverse=False)
+        new_vals = [self.__dict_[key] for key in new_keys]
+        new_tbl = table(dict(zip(new_keys, new_vals)), delim=self.__delim_)
+        new_tbl._err_ = self._err_
+        return new_tbl
+
+    def read_csv(self, file_stream, delim=None, is_header=True, verb=False):
         """
         CSV reader storing data in self `nano`.`table` .
         """
+        if delim is None:
+            delim = self.__delim_
         # import csv
         _err_ = []
+        if re.search(r"\(.*\)", delim) is not None and verb:
+            print(f"Warning: Delimiter regex `{delim}` contains group match `()`; "
+                   "this pose a risk of unintentional split results.")
+        # main separating function is re's split
         if is_header:
             header = re.split(delim, next(file_stream)[:-1])
             fst_line = re.split(delim, next(file_stream)[:-1])
@@ -149,8 +162,10 @@ class table:
         # return new_self
         return self
 
-    def export_csv(self, file_stream, delim="\t", is_header=True,
+    def export_csv(self, file_stream, delim=None, is_header=True,
                    header=None):
+        if delim is None:
+            delim = self.__delim_
         col_lens = list(map(lambda c: len(c), list(self.__dict_.values())))
         try:
             line = ""
