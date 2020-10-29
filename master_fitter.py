@@ -218,7 +218,7 @@ for direct in directions:
     print(f"Direction: {direct}")
     print(f"From 20{day[:2]}-{day[2:4]}-{day[4:6]}")
 
-    # %%
+    ## %%
     # Main resgd fitter
 
     raman = spectrum(lorentz, 3)
@@ -309,7 +309,7 @@ for direct in directions:
     r = dif(sol)
     print(f"{percentage(r.dot(r), y.dot(y))}")
     print("Fitting: Done")
-    # %%
+    ## %%
     # Active vs overall surface
     ix = 0
     while True:
@@ -407,7 +407,7 @@ for direct in directions:
     config[material]['average'][direct] = sol.copy()
     if '--show' in sys.argv:
         plt.show()
-    # %%
+    ## %%
     # Main fitter plotter
     print("Plotting...")
     K = M
@@ -670,7 +670,7 @@ for direct in directions:
 
     fig.write_html(f"./model_err_{material}_{direct}.html")
 
-    # %%
+    ## %%
     # Proper logic (fitting all data sets)
     print("Directional data fitting...")
     for dset in tbl.keys():
@@ -795,7 +795,7 @@ for direct in directions:
         config[material]['solutions'][direct].append(sol)
 
 
-    # %%
+    ## %%
     # All data comparison
     print("Plotting...")
     sols = config[material]['solutions'][direct]
@@ -930,7 +930,7 @@ for direct in directions:
         fig.show(config=pltconf)
 
     fig.write_html(f"./full_plot_{material}_{direct}.html")
-    # %%
+    ## %%
     # Polar of selected band
     print("Band polar plotting...")
     fig_polar = pgo.Figure()
@@ -976,5 +976,67 @@ for direct in directions:
         fig_polar.show(config=pltconf)
 
     fig_polar.write_html(f"./polar_{material}_{direct}.html")
-    # %%
-    print("All done.")
+# %%
+if material == 'si':
+    print("Intensity polar Si")
+    fig_polar = pgo.Figure()
+    fig_polar.layout.template = plotly_global
+    rads = [np.zeros(37), np.zeros(37)]
+    for tr in config[material]['polar']:
+        if 'VV' in tr['name']:
+            rads[0] += np.array(tr['r'])
+        elif 'VH' in tr['name']:
+            rads[1] += np.array(tr['r'])
+
+
+    traces = [
+        {
+            'name': f"{direct} intensity",
+            'type': 'scatterpolar',
+            'mode': 'markers',
+            'marker': {
+                'size': 5
+            },
+            'theta': [theta for theta in range(0, 370, 10)],
+            'r': rads[nd]
+        } for nd, direct in enumerate(directions)
+    ]
+
+    traces += [
+        {
+            'name': 'Summed intensity',
+            'type': 'scatterpolar',
+            'mode': 'markers',
+            'marker': {
+                'size': 5,
+                'symbol': 'x'
+            },
+            'theta': [theta for theta in range(0, 370, 10)],
+            'r': rads[0]+rads[1]
+        }
+    ]
+
+    layout = {
+        'title': 'Polar intensity (not normalised), VV and VH',
+        'showlegend': True
+    }
+
+    pltconf = {
+        'modeBarButtonsToAdd': [
+            'drawline',
+            'drawopenpath',
+            'drawclosedpath',
+            'drawcircle',
+            'drawrect',
+            'eraseshape'
+        ]
+    }
+
+    fig_polar.add_traces(traces)
+    fig_polar.update_layout(layout)
+    if '--show' in sys.argv:
+        fig_polar.show(config=pltconf)
+
+    fig_polar.write_html(f"./polar_{material}_full.html")
+print("All done.")
+# %%
