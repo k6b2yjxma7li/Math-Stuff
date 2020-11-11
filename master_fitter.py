@@ -347,13 +347,13 @@ for direct in directions:
             if '__len__' not in dir(y_std):
                 y_std = np.linspace(y_std, y_std, len(y_p))
 
-            def DENS(u, v):
+            def _dens_(u, v):
                 data = 0
                 for n in range(len(x_p)):
                     data += single_density((u-x_p[n])/x_std[n],
                                         (v-y_p[n])/y_std[n])/(x_std[n]*y_std[n])
                 return np.array(data)
-            return DENS
+            return _dens_
 
         sgm = 0.5
         density = set_density(surface, active, sgm, sgm)
