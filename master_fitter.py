@@ -95,6 +95,7 @@ def window(cutoff, center, width):
     return lambda slt: (np.exp(cutoff*np.array(slt) - center - width/2) +
                         np.exp(-cutoff*np.array(slt) + center + width/2))
 
+
 # %%
 # Configuration
 config = {
@@ -196,7 +197,8 @@ for direct in directions:
             tdict.update({n: dataset[0]})
     for nr, name in enumerate(datafiles):
         name = os.path.join(path, name)
-        tbl += {tdict[nr]: table().read_csv(open(name, 'r'), delim=r",|\t{1,}")}
+        tbl += {tdict[nr]: table().read_csv(open(name, 'r'),
+                delim=r",|\t{1,}")}
     datafiles = dict(zip(tdict.keys(), datafiles))
     tbl = tbl.sort()
     y_av = 0
@@ -218,7 +220,7 @@ for direct in directions:
     print(f"Direction: {direct}")
     print(f"From 20{day[:2]}-{day[2:4]}-{day[4:6]}")
 
-    ## %%
+    # # %%
     # Main resgd fitter
 
     raman = spectrum(lorentz, 3)
@@ -236,7 +238,6 @@ for direct in directions:
     #     xpos = np.array(simple_compnts(slt, 2))
     #     return residual(raman, u, v)(slt)
 
-
     dif = residual(raman, u, v)
     r = dif([1, 1, 0])
 
@@ -244,7 +245,8 @@ for direct in directions:
     # To be used later
     # while 100*r.dot(r)/v.dot(v) > 0.5:
     #     # plt.plot(len(sol), np.log(100*r.dot(r)/v.dot(v)), '.', ms=0.7)
-    #     rk = [ri for ri in transform(kernel_gen(lorentz, [1, 1000, 0]), u, r)]
+    #     rk = [ri for ri in transform(
+    #           kernel_gen(lorentz, [1, 1000, 0]), u, r)]
     #     ix_max = np.array(range(len(r)))[r == max(r)][0]
     #     pos = np.array(xpeak(u, r, r[ix_max], (r[ix_max]+rk[ix_max])/2))
     #     Amp = r[ix_max] - rk[ix_max]
@@ -268,12 +270,10 @@ for direct in directions:
     dif = residual(raman, x, y)
     r = dif([0, 1, 1])
 
-
     def resg_gen(fn, u, v, w):
         def _res_(slt):
             return residual(fn, u, v, w)(slt)*np.array(slt).dot(np.array(slt))
         return _res_
-
 
     M = config[material]['M']['init']
     while len(sol)/3 < config[material]['init']:
@@ -309,7 +309,7 @@ for direct in directions:
     r = dif(sol)
     print(f"{percentage(r.dot(r), y.dot(y))}")
     print("Fitting: Done")
-    ## %%
+    # # %%
     # Active vs overall surface
     ix = 0
     while True:
@@ -323,7 +323,8 @@ for direct in directions:
         for n in range(0, len(sol)-1, 3):
             surface += [np.log10(np.pi*abs(sol[n]*sol[n+1]))]
             active += [np.log10(abs(sum(lorentz(sol[n:n+3], x)*d(x))))]
-            # and special thanks to that lorentzian which is super thin and high
+            # and special thanks to that lorentzian which is super
+            # thin and high
             if active[-1] > surface[-1] and min(x) <= sol[n+2] <= max(x):
                 # please don't come back
                 active[-1] = surface[-1]
@@ -351,7 +352,7 @@ for direct in directions:
                 data = 0
                 for n in range(len(x_p)):
                     data += sing_dnst((u-x_p[n])/x_std[n],
-                                        (v-y_p[n])/y_std[n])/(x_std[n]*y_std[n])
+                                      (v-y_p[n])/y_std[n])/(x_std[n]*y_std[n])
                 return np.array(data)
             return _dens_
 
@@ -362,11 +363,10 @@ for direct in directions:
         # def density_estimator(u, density_profile):
         #     return u.dot(density_profile/sum(density_profile))
 
-
         est = np.mean
 
         X, Y = np.meshgrid(np.linspace(min(surface)-1, max(surface)+1, 1000),
-                        np.linspace(min(active)-1, max(active)+1, 1000))
+                           np.linspace(min(active)-1, max(active)+1, 1000))
 
         R = pearson(surface, active, estimator=est)
         s_std = (est(surface**2) - est(surface)**2)**0.5
@@ -377,14 +377,16 @@ for direct in directions:
 
         Z = bivariate((X-s_m)/s_std, (Y-a_m)/a_std, R)
 
-        requirement = bivariate((surface-s_m)/s_std, (active-a_m)/a_std, R) >= 0.05
+        requirement = (bivariate((surface-s_m)/s_std, (active-a_m)/a_std, R)
+                       >= 0.05)
 
         for n in range(len(surface)):
             if not requirement[n]:
                 ax.plot(surface[n], active[n], '.', color='red')
 
         ax.plot(s_m, a_m, '+', ms=5, color=[1, 0, 1])
-        ax.text(s_m, a_m, f"({round(s_m, 2)},{round(a_m, 2)})", color=[1, 1, 0],
+        ax.text(s_m, a_m, f"({round(s_m, 2)},{round(a_m, 2)})",
+                color=[1, 1, 0],
                 fontsize=8)
         levs = np.array([1e-4, 2e-4, 5e-4, 0.001, 0.002, 0.005, 0.01,
                         0.02, 0.05, 0.1, 0.2, 0.5, 1])*max(Z.flatten())
@@ -407,7 +409,7 @@ for direct in directions:
     config[material]['average'][direct] = sol.copy()
     if '--show' in sys.argv:
         plt.show()
-    ## %%
+    # # %%
     # Main fitter plotter
     print("Plotting...")
     K = M
@@ -416,7 +418,7 @@ for direct in directions:
 
     fig = psp.make_subplots(rows=2, cols=1, shared_xaxes=True,
                             specs=[[{'secondary_y': True}],
-                                [{'secondary_y': False}]])
+                                   [{'secondary_y': False}]])
     fig.layout.template = plotly_global
 
     traces1 = [
@@ -576,7 +578,7 @@ for direct in directions:
         # if 'yaxis' in trace:
         fig.add_trace(trace, row=2, col=1)
         # else:
-            # fig.add_trace(trace, row=2, col=1)
+        # fig.add_trace(trace, row=2, col=1)
     fig.update_layout(layout)
     if '--show' in sys.argv:
         fig.show(config=pltconf)
@@ -670,7 +672,7 @@ for direct in directions:
 
     fig.write_html(f"./model_err_{material}_{direct}.html")
 
-    ## %%
+    # # %%
     # Proper logic (fitting all data sets)
     print("Directional data fitting...")
     for dset in tbl.keys():
@@ -679,7 +681,7 @@ for direct in directions:
         sol = config[material]['average'][direct]
         y = np.array(tbl[dset]['#Intensity'])[config[material]['frame']]
         sol, h = leastsq(residual(raman, x, y),
-                        sol)
+                         sol)
         dif = residual(raman, x, y)
         print(f"For {dset} deg.: {dif(sol).dot(dif(sol))}")
 
@@ -723,7 +725,8 @@ for direct in directions:
             for n in range(0, len(sol)-1, 3):
                 surface += [np.log10(np.pi*abs(sol[n]*sol[n+1]))]
                 active += [np.log10(abs(sum(lorentz(sol[n:n+3], x)*d(x))))]
-                # and special thanks to that lorentz which is super thin and high
+                # and special thanks to that lorentz which is
+                # super thin and high
                 if active[-1] > surface[-1] and min(x) <= sol[n+2] <= max(x):
                     # please don't come back
                     active[-1] = surface[-1]
@@ -738,7 +741,8 @@ for direct in directions:
                 data = 1/(2*np.pi)*np.exp(-(u**2 + v**2)/2)
                 return data
 
-            def set_density(x_p, y_p, x_std=1, y_std=1, sing_dnst=single_density):
+            def set_density(x_p, y_p, x_std=1, y_std=1,
+                            sing_dnst=single_density):
                 if '__len__' not in dir(x_std):
                     x_std = np.linspace(x_std, x_std, len(x_p))
                 if '__len__' not in dir(y_std):
@@ -748,7 +752,7 @@ for direct in directions:
                     data = 0
                     for n in range(len(x_p)):
                         data += (sing_dnst((u-x_p[n])/x_std[n],
-                                (v-y_p[n])/y_std[n])/(x_std[n]*y_std[n]))
+                                 (v-y_p[n])/y_std[n])/(x_std[n]*y_std[n]))
                     return np.array(data)
                 return _dens_
 
@@ -768,8 +772,9 @@ for direct in directions:
             s_m = est(surface)
             a_m = est(active)
 
-            X, Y = np.meshgrid(np.linspace(min(surface)-1, max(surface)+1, 1000),
-                            np.linspace(min(active)-1, max(active)+1, 1000))
+            X, Y = np.meshgrid(np.linspace(min(surface)-1, max(surface)+1,
+                                           1000),
+                               np.linspace(min(active)-1, max(active)+1, 1000))
 
             Z = bivariate((X-s_m)/s_std, (Y-a_m)/a_std, R)
 
@@ -793,8 +798,7 @@ for direct in directions:
             ix += 1
         config[material]['solutions'][direct].append(sol)
 
-
-    ## %%
+    # # %%
     # All data comparison
     print("Plotting...")
     sols = config[material]['solutions'][direct]
@@ -840,19 +844,20 @@ for direct in directions:
         # bands selection mechanism
         ixs = []
         sol_cp = sol.copy()
-        sol_ix = np.arange(int(len(sol)/3)) # keeping track of real ix
+        sol_ix = np.arange(int(len(sol)/3))  # keeping track of real ix
         # instead of dropped-element array ix-es
         threshold = 0.9
         for band in bands:
             ix = next(nearest_val(simple_compnts(sol_cp, 2), band))
             # making sure no over-the-top bands are selected
-            # (selected - band) < 2*width 
+            # (selected - band) < 2*width
             w = simple_compnts(sol_cp, 1)[ix]
             x0 = simple_compnts(sol_cp, 2)[ix]
-            # 0.95 here is intensity threshold, where spectral line is considered
-            # out of band
+            # 0.95 here is intensity threshold, where spectral line is
+            # considered out of band
             # if ((band - x0)/abs(w) > np.tan(threshold * (np.pi/4))):
-            if abs(band - x0) > 5*abs(w) and 5*abs(w) > abs(np.mean(np.diff(x_av))):
+            if (abs(band - x0) > 5*abs(w) and
+               5*abs(w) > abs(np.mean(np.diff(x_av)))):
                 # selection rules for bands might be changed in next iterations
                 # this one is not final
                 continue
@@ -894,7 +899,7 @@ for direct in directions:
             'args': [
                 {'visible': [False]*len(fig.data)},
                 {'title': f'{config[material]["fullname"]} {direct}'
-                        f' @ Angle {i*10} deg.'}
+                          f' @ Angle {i*10} deg.'}
             ]
         }
         for m in range(sum(trace_count[:i]), sum(trace_count[:i+1]), 1):
@@ -929,16 +934,18 @@ for direct in directions:
         fig.show(config=pltconf)
 
     fig.write_html(f"./full_plot_{material}_{direct}.html")
-    ## %%
+    # # %%
     # Polar of selected band
     print("Band polar plotting...")
     fig_polar = pgo.Figure()
     fig_polar.layout.template = plotly_global
     print(ixs_all)
 
+    tmp = simple_compnts(sols[0], 2)[ixs_all[0]]
+
     traces = [
         {
-            'name': f'{direct} band {round(simple_compnts(sols[0], 2)[ixs_all[0][nr]], 2)}',
+            'name': f'{direct} band {round(tmp[nr], 2)}',
             'type': 'scatterpolar',
             'mode': 'markers',
             'marker': {
@@ -946,8 +953,8 @@ for direct in directions:
             },
             'theta': [theta for theta in range(0, 370, 10)],
             'r': [abs(simple_compnts(sols[n], 0)[ixs_all[n][nr]] *
-                    simple_compnts(sols[n], 1)[ixs_all[n][nr]])
-                for n in range(len(sols))]
+                  simple_compnts(sols[n], 1)[ixs_all[n][nr]])
+                  for n in range(len(sols))]
         } for nr in range(len(min(ixs_all, key=lambda arr: len(arr))))
     ]
     # adding traces to global storage (for later use)
@@ -986,7 +993,6 @@ if material == 'si':
             rads[0] += np.array(tr['r'])
         elif 'VH' in tr['name']:
             rads[1] += np.array(tr['r'])
-
 
     traces = [
         {
