@@ -341,7 +341,7 @@ for direct in directions:
             data = 1/(2*np.pi)*np.exp(-(u**2 + v**2)/2)
             return data
 
-        def set_density(x_p, y_p, x_std=1, y_std=1):
+        def set_density(x_p, y_p, x_std=1, y_std=1, sing_dnst=single_density):
             if '__len__' not in dir(x_std):
                 x_std = np.linspace(x_std, x_std, len(x_p))
             if '__len__' not in dir(y_std):
@@ -350,18 +350,18 @@ for direct in directions:
             def _dens_(u, v):
                 data = 0
                 for n in range(len(x_p)):
-                    data += single_density((u-x_p[n])/x_std[n],
+                    data += sing_dnst((u-x_p[n])/x_std[n],
                                         (v-y_p[n])/y_std[n])/(x_std[n]*y_std[n])
                 return np.array(data)
             return _dens_
 
         sgm = 0.5
-        density = set_density(surface, active, sgm, sgm)
+        # what is this for?
+        # density = set_density(surface, active, sgm, sgm)
+        # dens_prof = density(surface, active)
+        # def density_estimator(u, density_profile):
+        #     return u.dot(density_profile/sum(density_profile))
 
-        def density_estimator(u):
-            D = density(surface, active)
-            D /= sum(D)
-            return u.dot(D)
 
         est = np.mean
 
@@ -738,27 +738,26 @@ for direct in directions:
                 data = 1/(2*np.pi)*np.exp(-(u**2 + v**2)/2)
                 return data
 
-            def set_density(x_p, y_p, x_std=1, y_std=1):
+            def set_density(x_p, y_p, x_std=1, y_std=1, sing_dnst=single_density):
                 if '__len__' not in dir(x_std):
                     x_std = np.linspace(x_std, x_std, len(x_p))
                 if '__len__' not in dir(y_std):
                     y_std = np.linspace(y_std, y_std, len(y_p))
 
-                def DENS(u, v):
+                def _dens_(u, v):
                     data = 0
                     for n in range(len(x_p)):
-                        data += (single_density((u-x_p[n])/x_std[n],
+                        data += (sing_dnst((u-x_p[n])/x_std[n],
                                 (v-y_p[n])/y_std[n])/(x_std[n]*y_std[n]))
                     return np.array(data)
-                return DENS
+                return _dens_
 
             sgm = 0.1
-            density = set_density(surface, active, sgm, sgm)
-
-            def density_estimator(u):
-                D = density(surface, active)
-                D /= sum(D)
-                return u.dot(D)
+            # what is this for?
+            # density = set_density(surface, active, sgm, sgm)
+            # dens_prof = density(surface, active)
+            # def density_estimator(u, density_profile):
+            #     return u.dot(density_profile/sum(density_profile))
 
             est = np.mean
 
