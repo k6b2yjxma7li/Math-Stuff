@@ -42,7 +42,7 @@ def R_psi(psi):
 
 # # %%
 # Incident light wave vector
-k = np.array([0, 0, -1])
+k = np.array([0.5, -0.1, -1])
 
 phi, theta, psi = k_vec(*k)
 
@@ -53,7 +53,7 @@ E_x = []
 E_y = []
 E_z = []
 
-a, b, d = 1, 0.1, 1
+a, b, d = 1, 1, 1
 psi_tensor = 0
 tensor_rotz = np.array([[np.cos(psi_tensor), -np.sin(psi_tensor), 0],
                         [np.sin(psi_tensor), np.cos(psi_tensor), 0],
@@ -95,54 +95,49 @@ Es_zp = []
 nfold = 36
 
 txt = []
-
+# %% main loop
 for n in range(nfold):
-    # dla tesnora E2g należy wziąć sumę intensywności z obu tensorów
+    # dla tensora zdeg należy wziąć sumę intensywności z obu tensorów
     txt.append(f"{10*n} deg.")
     E = np.array([np.cos(2*np.pi/nfold * n),
                   np.sin(2*np.pi/nfold * n),
                   0])
-    E = R_i.dot(E)*(k.dot(k))**0.5 # incident polarization vector
-    if mode == 'E2g1':
-        Es1 = tensor_rotz.dot(mode['E2g2']).dot(E) # response polarization vector
-        Em += abs(uni.dot(tensor_rotz.dot(mode['E2g2']).dot(E)))**2
-    if mode == 'E2g2':
-        Es1 = tensor_rotz.dot(mode['E2g1']).dot(E) # response polarization vector
-        Em += abs(uni.dot(tensor_rotz.dot(mode['E2g1']).dot(E)))**2
-    Es = tensor_rotz.dot(mode[curr_mode]).dot(E) # response polarization vector
+    E = R_i.dot(E)*(k.dot(k))**0.5  # incident polarization vector
+
+    # response polarization vector
+    Es = tensor_rotz.dot(mode[curr_mode]).dot(E)
     if p_type == 'VV':
         uni = R_i.dot(np.array([np.cos(2*np.pi/nfold * n),
                                 np.sin(2*np.pi/nfold * n),
                                 0]))
-        Em = abs(uni.dot(Es))**2 * E/(E.dot(E))
+        Em = abs(uni.dot(Es))**2 * uni
     if p_type == 'VH':
         uni = R_i.dot(np.array([-np.sin(2*np.pi/nfold * n),
                                 np.cos(2*np.pi/nfold * n),
                                 0]))
-        Em = abs(uni.dot(Es))**2 * E/(E.dot(E))
-    
-    if curr_mode == 'E2g1':
-        Em += abs(uni.dot(tensor_rotz.dot(mode['E2g2']).dot(E)))**2
-    if curr_mode == 'E2g2':
-        Em += abs(uni.dot(tensor_rotz.dot(mode['E2g1']).dot(E)))**2
+        Em = abs(uni.dot(Es))**2 * uni
 
     if curr_mode in ['E2g1', 'E2g2']:
         Es_xp.append(Es[0])
         Es_yp.append(Es[1])
         Es_zp.append(Es[2])
 
-    Es_x.append(Es[0])
-    Es_y.append(Es[1])
-    Es_z.append(Es[2])
-
-    Em_x.append(Em[0])
-    Em_y.append(Em[1])
-    Em_z.append(Em[2])
-
+    # incident E field vector
     E_x.append(E[0])
     E_y.append(E[1])
     E_z.append(E[2])
 
+    # scattered E field vector
+    Es_x.append(Es[0])
+    Es_y.append(Es[1])
+    Es_z.append(Es[2])
+
+    # measured E field vector
+    Em_x.append(Em[0])
+    Em_y.append(Em[1])
+    Em_z.append(Em[2])
+
+# unitary vectors
 i_v = [1, 0, 0]
 j_v = [0, 1, 0]
 k_v = [0, 0, 1]
@@ -376,3 +371,4 @@ fig.add_traces(traces)
 fig.update_layout(layout)
 
 fig.show()
+# %%
