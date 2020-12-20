@@ -316,7 +316,7 @@ title_part = title_part.replace(']', '')
 title_part = title_part.replace('\'', '')
 
 layout = {
-    'title': f'{} seen from {k} ({p_type})',
+    'title': f'{title_part} seen from {k} ({p_type})',
     'title_x': 0.5,
     'title_y': 0.95,
     'scene': {
