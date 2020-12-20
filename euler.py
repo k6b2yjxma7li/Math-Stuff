@@ -41,7 +41,7 @@ def R_psi(psi):
 
 # # %%
 # Incident light wave vector
-k = np.array([0, 0, -1])
+k = np.array([1, 1, -1])
 
 phi, theta, psi = k_vec(*k)
 
@@ -101,7 +101,7 @@ mode = {
     'T2z': T2z,
 }
 
-p_type = 'VV'
+p_type = 'VH'
 
 
 # angles
@@ -122,7 +122,7 @@ Es = np.array([np.zeros(len(t)),
                np.zeros(len(t))])
 
 # response vectors, R_psi is a mode tensor rotation around z-axis
-modes = ['E2g1', 'E2g2']
+modes = ['A1']
 for md in modes:
     Es += R_psi(psi_tensor).dot(mode[md]).dot(Ei)
 
@@ -350,15 +350,19 @@ layout = {
     'title_x': 0.5,
     'title_y': 0.95,
     'scene': {
+        'aspectmode': 'auto',
         'xaxis': {
-            'title': 'x'
+            'title': 'x',
+            # 'range': [-8, 8]
         },
         'yaxis': {
-            'title': 'y'
+            'title': 'y',
+            # 'range': [-8, 8]
         },
         'zaxis': {
-            'title': 'z'
-        }
+            'title': 'z',
+            # 'range': [-8, 8]
+        },
     },
     'margin': {
         't': 25,
