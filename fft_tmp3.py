@@ -1,6 +1,5 @@
 # %%
-from scipy.optimize import least_squares
-from scipy.optimize import leastsq
+from scipy.optimize import least_squares, leastsq
 from nano.functions import d, div
 from numpy import fft as nft
 
@@ -11,22 +10,64 @@ import numpy as np
 import re
 import os
 
+# while True:
+#     try:
+#         from scipy.optimize import least_squares
+#         from scipy.optimize import leastsq
+#         from nano.functions import d, div
+#         from numpy import fft as nft
+
+#         import matplotlib.pyplot as plt
+#         import os.path as op
+#         import pandas as pd
+#         import numpy as np
+#         import re
+#         import os
+#         break
+#     except ModuleNotFoundError as e:
+#         import subprocess as sp
+#         module_name = str(e).split("No module named ")
+#         if len(module_name) == 2:
+#             module_name = module_name[1][1:-1]
+#             bash_cmd = f"python3 -m pip install {module_name}"
+#             proc = sp.Popen(bash_cmd.split(), stdout=sp.PIPE)
+#             out, err = proc.communicate()
+#             if err:
+#                 raise Exception(err)
+#         else:
+#             raise e
+
 plt.style.use('dark_background')
 
 
 def kernel(ktype='gauss', unitary=True):
 
     def _gauss_(sig):
+        """Gaussian curve generator"""
         amp = unitary*((2*np.pi*sig**2)**-0.5) + (not unitary)*1
-        return lambda x: amp * np.exp(-0.5*(x/sig)**2)
+
+        def _gauss_f_(x):
+            """Gaussian: exp(- 1/2 * x**2 )"""
+            return amp * np.exp(-0.5*(x/sig)**2)
+        return _gauss_f_
 
     def _lorentz_(hmfw):
+        """Lorentzian curve generator"""
         amp = unitary * 1/(np.pi*hmfw) + (not unitary)*1
-        return lambda x: amp/(1 + (x/hmfw)**2)
+
+        def _lorentz_f_(x):
+            """Lorentzian: 1/( 1 + x**2 )"""
+            return amp/(1 + (x/hmfw)**2)
+        return _lorentz_f_
 
     def _fddens_(slope):
+        """Logistic (Fermi-Dirac dist.) curve generator"""
         amp = unitary * slope + (not unitary)*4
-        return lambda x: amp/(np.exp(-slope*x) + 2 + np.exp(slope*x))
+
+        def _fddens_f_(x):
+            """Logistic: 4/( exp(-x) + 2 + exp(x) )"""
+            return amp/(np.exp(-slope*x) + 2 + np.exp(slope*x))
+        return _fddens_f_
 
     class _kernel_:
         gauss = _gauss_
@@ -36,10 +77,16 @@ def kernel(ktype='gauss', unitary=True):
     return getattr(_kernel_, ktype)
 
 
-def convolve(kernel, x, signal, adj=False, t=None):
+def convolve(kernel, x, signal, adj=False, t=None, adjuster=None) -> np.array:
     sig_conv = []
     if t is None:
         t = x.copy()
+    if adjuster is not None:
+        for ti in t:
+            kernel_dint = kernel(x-ti)*np.abs(d(x))
+            kernal_int = sum(adjuster(x-ti)*np.abs(d(x)))
+            sig_conv.append(sum(signal*kernel_dint/kernal_int))
+        return np.array(sig_conv)
     if adj:
         for ti in t:
             kernel_dint = kernel(x-ti)*np.abs(d(x))
@@ -60,9 +107,12 @@ def spectrum(x, param_vec, func=kernel('lorentz', unitary=False)):
     return result
 
 
-def residual(x, y, func=spectrum):
+def residual(x, y, weights=None, func=spectrum):
+    if weights is None:
+        weights = np.linspace(1, 1, len(x))
+
     def _res_(param_vec):
-        return y-spectrum(x, param_vec)
+        return (y-spectrum(x, param_vec))/weights
     return _res_
 
 
@@ -137,19 +187,28 @@ except IndexError:
     raise ValueError(f"Wrong number: mfile_no: {mfile_no}; min: 0; max: 36")
 
 # %%
-plt.plot(x, y, '.', ms=0.7, label="Original")
-k_type = 'lorentz'
-# t = np.arange(min(x), max(x), 0.5)
-t = x
+k_type = 'fddens'
+fig, ax = plt.subplots(nrows=2, sharex=True)
+ax[0].set_title(f"Analysis for {k_type}")
+ax[0].plot(x, y, '.', ms=0.7, label="Original")
 
-for k in []:
-    krnl = kernel(k_type)(k)
+dy = d(y)/d(x)
+d2y = d(dy)/d(x)
 
-    yc = convolve(krnl, x, y, adj=True, t=t)
-    yc2 = convolve(krnl, x, y**2, adj=True, t=t)
-    ys = (yc2-yc**2)**0.5
-    plt.plot(t, yc, '-', lw=0.7, label=f"{k_type}: {k}")
+k_vals = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50]
+for k in k_vals:
+    y2c = convolve(kernel(k_type)(k), x, y**2, adjuster=kernel(k_type)(k))
+    yc = convolve(kernel(k_type)(k), x, y, adjuster=kernel(k_type)(k))
+    # yc2 = convolve(krnl, x, y**2, adj=True, t=t)
+    # ys = (yc2-yc**2)**0.5
+    ax[0].plot(x, yc, '-', lw=0.7, label=f"{k_type}: {k}")
+    sy = (y2c - yc**2)**0.5
+    sy /= sum(sy*np.abs(d(x)))  # normalized
+    base_line_value = sum(y/sy)/(sum(1/sy))
+    ax[1].plot(x, sy, '-', lw=0.7, label=f"stddev-{k}")
+    ax[0].plot(x, np.linspace(base_line_value, base_line_value, len(x)), '--',
+               lw=0.7)
+    # res, h = leastsq()
 
-plt.show()
-
-f, yf = fft_ready(x, y)
+fig.show()
+# %%
