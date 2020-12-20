@@ -48,14 +48,26 @@ phi, theta, psi = k_vec(*k)
 R_i = (R_phi(phi).dot(R_theta(theta)).dot(R_psi(psi)))
 R = R_phi(phi).dot(R_theta(theta)).dot(R_psi(psi))
 
-a, b, d = 1, 1, 1
+a, b, c, d = 1, 1, 1, 1
 psi_tensor = 0
 # rotating tensor around Z axis
 
 
+A1 = np.array([[a, 0, 0],
+               [0, a, 0],
+               [0, 0, a]])
+
 A1g = np.array([[a, 0, 0],
                 [0, a, 0],
                 [0, 0, b]])
+
+E_1 = np.array([[b, 0, 0],
+                [0, b, 0],
+                [0, 0, -2*b]])
+
+E_2 = np.array([[-3**0.5 * b, 0, 0],
+                [0, 3**0.5 * b, 0],
+                [0, 0, 0]])
 
 E2g1 = np.array([[0, -d, 0],
                  [-d, 0, 0],
@@ -65,13 +77,31 @@ E2g2 = np.array([[d, 0, 0],
                  [0, -d, 0],
                  [0, 0, 0]])
 
+T2x = np.array([[0, 0, 0],
+                [0, 0, d],
+                [0, d, 0]])
+
+T2y = np.array([[0, 0, d],
+                [0, 0, 0],
+                [d, 0, 0]])
+
+T2z = np.array([[0, d, 0],
+                [d, 0, 0],
+                [0, 0, 0]])
+
 mode = {
     'A1g': A1g,
+    'A1': A1,
+    'E_1': E_1,
+    'E_2': E_2,
     'E2g1': E2g1,
-    'E2g2': E2g2
+    'E2g2': E2g2,
+    'T2x': T2x,
+    'T2y': T2y,
+    'T2z': T2z,
 }
 
-p_type = 'VH'
+p_type = 'VV'
 
 
 # angles
