@@ -41,7 +41,7 @@ def R_psi(psi):
 
 # # %%
 # Incident light wave vector
-k = np.array([0.5, -0.1, -1])
+k = np.array([0, 0, -1])
 
 phi, theta, psi = k_vec(*k)
 
@@ -311,8 +311,12 @@ traces = [
     }
 ]
 
+title_part = str(modes).replace('[', '')
+title_part = title_part.replace(']', '')
+title_part = title_part.replace('\'', '')
+
 layout = {
-    'title': f'{modes} seen from {k} ({p_type})',
+    'title': f'{} seen from {k} ({p_type})',
     'title_x': 0.5,
     'title_y': 0.95,
     'scene': {
