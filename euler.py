@@ -3,7 +3,6 @@ import numpy as np
 import plotly.express as pex
 import plotly.subplots as psp
 import plotly.graph_objects as pgo
-# %%
 
 
 def vp_vec(phip):
@@ -12,7 +11,7 @@ def vp_vec(phip):
 
 def k_vec(x, y, z, *args):
     """
-    phi, theta
+    phi, theta, psi
     """
     norm = (x**2 + y**2 + z**2)**0.5
     xn = x/norm
@@ -49,15 +48,10 @@ phi, theta, psi = k_vec(*k)
 R_i = (R_phi(phi).dot(R_theta(theta)).dot(R_psi(psi)))
 R = R_phi(phi).dot(R_theta(theta)).dot(R_psi(psi))
 
-E_x = []
-E_y = []
-E_z = []
-
 a, b, d = 1, 1, 1
 psi_tensor = 0
-tensor_rotz = np.array([[np.cos(psi_tensor), -np.sin(psi_tensor), 0],
-                        [np.sin(psi_tensor), np.cos(psi_tensor), 0],
-                        [0, 0, 1]])
+# rotating tensor around Z axis
+
 
 A1g = np.array([[a, 0, 0],
                 [0, a, 0],
@@ -77,65 +71,36 @@ mode = {
     'E2g2': E2g2
 }
 
-curr_mode = 'E2g2'
-p_type = 'VV'
+p_type = 'VH'
 
-Es_x = []
-Es_y = []
-Es_z = []
 
-Em_x = []
-Em_y = []
-Em_z = []
+# angles
+t = np.arange(0, 2*np.pi*(1 + 1/36), 2*np.pi/36)
+txt = [f"{10*n} deg." for n in range(len(t))]
 
-Es_xp = []
-Es_yp = []
-Es_zp = []
+# direction vectors
+uni = np.array([np.cos(t), np.sin(t), np.zeros(len(t))])
+# polarizations
+Eik = uni.copy() * k.dot(k)**0.5
+# incident field vectors
+Ei = R_i.dot(Eik)
+# measurement vectors
+uni_m = R_i.dot(uni)
 
-nfold = 36
+Es = np.array([np.zeros(len(t)),
+               np.zeros(len(t)),
+               np.zeros(len(t))])
 
-txt = []
-# %% main loop
-for n in range(nfold):
-    # dla tensora zdeg należy wziąć sumę intensywności z obu tensorów
-    txt.append(f"{10*n} deg.")
-    E = np.array([np.cos(2*np.pi/nfold * n),
-                  np.sin(2*np.pi/nfold * n),
-                  0])
-    E = R_i.dot(E)*(k.dot(k))**0.5  # incident polarization vector
+# response vectors, R_psi is a mode tensor rotation around z-axis
+modes = ['E2g1', 'E2g2']
+for md in modes:
+    Es += R_psi(psi_tensor).dot(mode[md]).dot(Ei)
 
-    # response polarization vector
-    Es = tensor_rotz.dot(mode[curr_mode]).dot(E)
-    if p_type == 'VV':
-        uni = R_i.dot(np.array([np.cos(2*np.pi/nfold * n),
-                                np.sin(2*np.pi/nfold * n),
-                                0]))
-        Em = abs(uni.dot(Es))**2 * uni
-    if p_type == 'VH':
-        uni = R_i.dot(np.array([-np.sin(2*np.pi/nfold * n),
-                                np.cos(2*np.pi/nfold * n),
-                                0]))
-        Em = abs(uni.dot(Es))**2 * uni
-
-    if curr_mode in ['E2g1', 'E2g2']:
-        Es_xp.append(Es[0])
-        Es_yp.append(Es[1])
-        Es_zp.append(Es[2])
-
-    # incident E field vector
-    E_x.append(E[0])
-    E_y.append(E[1])
-    E_z.append(E[2])
-
-    # scattered E field vector
-    Es_x.append(Es[0])
-    Es_y.append(Es[1])
-    Es_z.append(Es[2])
-
-    # measured E field vector
-    Em_x.append(Em[0])
-    Em_y.append(Em[1])
-    Em_z.append(Em[2])
+# measurement values
+if p_type == 'VV':
+    Em = uni_m * np.sum(uni_m * Es, 0)**2
+elif p_type == 'VH':
+    Em = uni_m * np.sum(R_psi(np.pi/2).dot(uni_m) * Es, 0)**2
 
 # unitary vectors
 i_v = [1, 0, 0]
@@ -149,7 +114,7 @@ k_v = R.dot(k_v)
 fig = pex.scatter_3d()
 fig.layout.template = 'plotly_dark'
 
-traces = [
+endpoints = [
     # endpoints
     # X'
     {
@@ -189,7 +154,10 @@ traces = [
             'color': 'blue'
         },
         'name': 'k (Z\')'
-    },
+    }
+]
+
+basis = [
     # vecs
     # X'
     {
@@ -281,8 +249,11 @@ traces = [
             'color': 'white'
         },
         'name': 'O (XYZ)'
-    },
-    # v vector
+    }
+]
+
+traces = [
+    # k vector
     {
         'x': [0, k[0]],
         'y': [0, k[1]],
@@ -293,13 +264,13 @@ traces = [
             'color': 'white',
             'width': 2
         },
-        'name': 'v'
+        'name': 'k'
     },
-    # E field vecs
+    # E incident field vecs
     {
-        'x': E_x,
-        'y': E_y,
-        'z': E_z,
+        'x': Ei[0],
+        'y': Ei[1],
+        'z': Ei[2],
         'text': txt,
         'type': 'scatter3d',
         'mode': 'markers',
@@ -309,11 +280,11 @@ traces = [
         },
         'name': 'incident field'
     },
-    # Es field vecs
+    # E scattered field vecs
     {
-        'x': Es_x,
-        'y': Es_y,
-        'z': Es_z,
+        'x': Es[0],
+        'y': Es[1],
+        'z': Es[2],
         'text': txt,
         'type': 'scatter3d',
         'mode': 'markers',
@@ -323,11 +294,11 @@ traces = [
         },
         'name': 'scattered field'
     },
-    # Em field vecs
+    # E measured field vecs
     {
-        'x': Em_x,
-        'y': Em_y,
-        'z': Em_z,
+        'x': Em[0],
+        'y': Em[1],
+        'z': Em[2],
         'text': txt,
         'type': 'scatter3d',
         'mode': 'lines',
@@ -341,7 +312,7 @@ traces = [
 ]
 
 layout = {
-    'title': f'Mode {curr_mode} seen from {k} ({p_type})',
+    'title': f'{modes} seen from {k} ({p_type})',
     'title_x': 0.5,
     'title_y': 0.95,
     'scene': {
@@ -350,13 +321,9 @@ layout = {
         },
         'yaxis': {
             'title': 'y'
-            # 'scaleanchor': 'x',
-            # 'scaleratio': 1
         },
         'zaxis': {
             'title': 'z'
-            # 'scaleanchor': 'x',
-            # 'scaleratio': 1
         }
     },
     'margin': {
@@ -367,8 +334,9 @@ layout = {
     }
 }
 
-fig.add_traces(traces)
+fig.add_traces(basis + endpoints + traces)
 fig.update_layout(layout)
 
 fig.show()
+
 # %%
