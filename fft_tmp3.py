@@ -187,28 +187,18 @@ except IndexError:
     raise ValueError(f"Wrong number: mfile_no: {mfile_no}; min: 0; max: 36")
 
 # %%
-k_type = 'fddens'
-fig, ax = plt.subplots(nrows=2, sharex=True)
-ax[0].set_title(f"Analysis for {k_type}")
-ax[0].plot(x, y, '.', ms=0.7, label="Original")
 
-dy = d(y)/d(x)
-d2y = d(dy)/d(x)
+fig, ax = plt.subplots(nrows=2)
+t = np.linspace(min(x), max(x), len(x))
 
-k_vals = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50]
-for k in k_vals:
-    y2c = convolve(kernel(k_type)(k), x, y**2, adjuster=kernel(k_type)(k))
-    yc = convolve(kernel(k_type)(k), x, y, adjuster=kernel(k_type)(k))
-    # yc2 = convolve(krnl, x, y**2, adj=True, t=t)
-    # ys = (yc2-yc**2)**0.5
-    ax[0].plot(x, yc, '-', lw=0.7, label=f"{k_type}: {k}")
-    sy = (y2c - yc**2)**0.5
-    sy /= sum(sy*np.abs(d(x)))  # normalized
-    base_line_value = sum(y/sy)/(sum(1/sy))
-    ax[1].plot(x, sy, '-', lw=0.7, label=f"stddev-{k}")
-    ax[0].plot(x, np.linspace(base_line_value, base_line_value, len(x)), '--',
-               lw=0.7)
-    # res, h = leastsq()
+yt = convolve(kernel()(0.1), x, y, adj=True, t=t)
 
-fig.show()
-# %%
+ax[0].plot(x, y, '.', ms=1)
+ax[0].plot(t, yt, '-', lw=0.7)
+
+t_center = (max(t) + min(t))/2
+k = kernel('lorentz')(1)((t - t_center))
+kf = nft.fft(k)
+ytf = nft.fft(yt)
+
+ax[1].plot(t, d(nft.fftshift(nft.ifft(ytf/kf)))/d(t) - d(yt)/(t), '--', lw=0.5)
