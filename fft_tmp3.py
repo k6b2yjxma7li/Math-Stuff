@@ -1,43 +1,21 @@
 # %%
 from scipy.optimize import least_squares, leastsq
 from nano.functions import d, div
+
 from numpy import fft as nft
 
 import matplotlib.pyplot as plt
+import plotly.express as pex
 import os.path as op
+
 import pandas as pd
 import numpy as np
 import re
 import os
 
-# while True:
-#     try:
-#         from scipy.optimize import least_squares
-#         from scipy.optimize import leastsq
-#         from nano.functions import d, div
-#         from numpy import fft as nft
-
-#         import matplotlib.pyplot as plt
-#         import os.path as op
-#         import pandas as pd
-#         import numpy as np
-#         import re
-#         import os
-#         break
-#     except ModuleNotFoundError as e:
-#         import subprocess as sp
-#         module_name = str(e).split("No module named ")
-#         if len(module_name) == 2:
-#             module_name = module_name[1][1:-1]
-#             bash_cmd = f"python3 -m pip install {module_name}"
-#             proc = sp.Popen(bash_cmd.split(), stdout=sp.PIPE)
-#             out, err = proc.communicate()
-#             if err:
-#                 raise Exception(err)
-#         else:
-#             raise e
-
 plt.style.use('dark_background')
+
+# Definitions
 
 
 def kernel(ktype='gauss', unitary=True):
@@ -161,6 +139,7 @@ def fft_plot(x: np.array, y: np.array, name='FFT', title='', scales="log-log"):
 
 
 # %%
+# Data files reading
 path = ".data/Praca_inzynierska/Badania/200924/polar_si/VV"
 data = {}
 path, dir, files = next(os.walk(path))
@@ -169,10 +148,11 @@ for fname in files:
                               header=0, engine='python')
 
 # %%
+# Data extraction
 xnm = '#Wave'
 ynm = '#Intensity'
 
-mfile_no = 1
+mfile_no = 2
 
 try:
     x = np.array(data[files[mfile_no]][xnm])
@@ -187,18 +167,78 @@ except IndexError:
     raise ValueError(f"Wrong number: mfile_no: {mfile_no}; min: 0; max: 36")
 
 # %%
+# Convolution of data against equidistant x points can be
+# performed with acceptably high confidence because original
+# x arg was semi-equidistant
+hmfw_equid = 0.1
+hmfw = 1
 
-fig, ax = plt.subplots(nrows=2)
-t = np.linspace(min(x), max(x), len(x))
+# getting new x args (equidistant)
+t = np.array(np.linspace(min(x), max(x), len(x)))
+# convolving data to fit equidistant x arg
+yt = convolve(kernel()(hmfw_equid), x, y, adj=True, t=t)
+yt = yt * sum(y*np.abs(d(x)))/sum(yt*d(t))
 
-yt = convolve(kernel()(0.1), x, y, adj=True, t=t)
-
-ax[0].plot(x, y, '.', ms=1)
-ax[0].plot(t, yt, '-', lw=0.7)
-
+# getting possibly most regular kernel (centered)
 t_center = (max(t) + min(t))/2
-k = kernel('lorentz')(1)((t - t_center))
+k = kernel('lorentz')(hmfw)((t - t_center))*(np.pi*hmfw)
+# kernel fft
 kf = nft.fft(k)
+# data fft
 ytf = nft.fft(yt)
+# equidistantly convolved kernel-anti-convolved ifft-ed data
+# ytac = IFT(FT(\int_{-\inf}^{\inf} y k_{s}(t-x) dx )/FT(k_{h}(t)))
+ytac = np.abs(nft.fftshift(nft.ifft(ytf/kf)))
+# normalization and renormalization
+ytac = ytac * sum(y*d(t))/sum(ytac*d(t))
 
-ax[1].plot(t, d(nft.fftshift(nft.ifft(ytf/kf)))/d(t) - d(yt)/(t), '--', lw=0.5)
+# plot
+fig = pex.scatter()
+fig.layout.template = 'plotly_dark'
+traces = [
+    {
+        'name': 'Data',
+        'x': x,
+        'y': y,
+        'mode': 'markers',
+        'marker': {
+            'size': 1
+        }
+    },
+    {
+        'name': 'Equidistant convolved',
+        'x': t,
+        'y': yt,
+        'mode': 'lines',
+        'line': {
+            'dash': 'dash',
+            'width': 1
+        }
+    },
+    {
+        'name': 'Anti-convolved',
+        'x': t,
+        'y': ytac,
+        'mode': 'lines',
+        'line': {
+            'width': 1
+        }
+    }
+]
+
+layout = {
+    'legend': {
+        'traceorder': 'reversed'
+    },
+    # 'yaxis': {
+    #     'range': [min(y)*0.9, max(y)*1.1]
+    # }
+}
+
+fig.add_traces(traces[::-1])
+
+fig.update_layout(layout)
+
+fig.show()
+
+# %%
