@@ -170,27 +170,47 @@ except IndexError:
 # Convolution of data against equidistant x points can be
 # performed with acceptably high confidence because original
 # x arg was semi-equidistant
-hmfw_equid = 0.1
-hmfw = 1
 
-# getting new x args (equidistant)
-t = np.array(np.linspace(min(x), max(x), len(x)))
-# convolving data to fit equidistant x arg
-yt = convolve(kernel()(hmfw_equid), x, y, adj=True, t=t)
-yt = yt * sum(y*np.abs(d(x)))/sum(yt*d(t))
+traces_ytac = []
+for hmfw in [1, 2, 5, 10, 20]:
 
-# getting possibly most regular kernel (centered)
-t_center = (max(t) + min(t))/2
-k = kernel('lorentz')(hmfw)((t - t_center))*(np.pi*hmfw)
-# kernel fft
-kf = nft.fft(k)
-# data fft
-ytf = nft.fft(yt)
-# equidistantly convolved kernel-anti-convolved ifft-ed data
-# ytac = IFT(FT(\int_{-\inf}^{\inf} y k_{s}(t-x) dx )/FT(k_{h}(t)))
-ytac = np.abs(nft.fftshift(nft.ifft(ytf/kf)))
-# normalization and renormalization
-ytac = ytac * sum(y*d(t))/sum(ytac*d(t))
+    # getting new x args (equidistant)
+    t = np.array(np.linspace(min(x), max(x), len(x)))
+    # convolving data to fit equidistant x arg
+    hmfw_equid = 1
+    kernel_equid_type = 'gauss'
+    yt = convolve(kernel(kernel_equid_type)(hmfw_equid), x, y, adj=True, t=t)
+    yt = yt * sum(y*np.abs(d(x)))/sum(yt*d(t))
+
+    # getting possibly most regular kernel (centered)
+    t_center = (max(t) + min(t))/2
+    kernel_type = 'lorentz'
+    k = kernel(kernel_type)(hmfw)((t - t_center))*(np.pi*hmfw)
+    # kernel fft
+    kf = nft.fft(k)
+    # data fft
+    ytf = nft.fft(yt)
+    # equidistantly convolved kernel-anti-convolved ifft-ed data
+    # ytac = IFT(FT(\int_{-\inf}^{\inf} y k_{s}(t-x) dx )/FT(k_{h}(t)))
+    ytac = np.abs(nft.fftshift(nft.ifft(ytf/kf)))
+    # normalization and renormalization
+    ytac = ytac * sum(y*d(t))/sum(ytac*d(t))
+    # std dist of ytac with moving average
+    hmfw_new = 0.01
+    sytac_type = 'lorentz'
+    sytac = (convolve(kernel(sytac_type)(hmfw_new), t, ytac**2, adj=True) -
+             convolve(kernel(sytac_type)(hmfw_new), t, ytac, adj=True)**2)**0.5
+    traces_ytac += [
+        {
+            'name': f"Anti-conv'd, hmfw: {hmfw}",
+            'x': t,
+            'y': ytac,
+            'mode': 'lines',
+            'line': {
+                'width': 1
+            }
+        },
+    ]
 
 # plot
 fig = pex.scatter()
@@ -215,16 +235,18 @@ traces = [
             'width': 1
         }
     },
-    {
-        'name': 'Anti-convolved',
-        'x': t,
-        'y': ytac,
-        'mode': 'lines',
-        'line': {
-            'width': 1
-        }
-    }
+    # {
+    #     'name': 'Found peak',
+    #     'x': t,
+    #     'y': ytac,
+    #     'mode': 'lines',
+    #     'line': {
+    #         'width': 1
+    #     }
+    # }
 ]
+
+traces = traces_ytac + traces
 
 layout = {
     'legend': {
