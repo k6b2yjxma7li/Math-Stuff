@@ -5,6 +5,7 @@ from nano.functions import d, div
 from numpy import fft as nft
 
 import matplotlib.pyplot as plt
+import plotly.subplots as psp
 import plotly.express as pex
 import os.path as op
 
@@ -77,20 +78,37 @@ def convolve(kernel, x, signal, adj=False, t=None, adjuster=None) -> np.array:
     return np.array(sig_conv)
 
 
-def spectrum(x, param_vec, func=kernel('lorentz', unitary=False)):
+def anti_convolve(kernel, x, signal) -> np.array:
+    # getting possibly most regular kernel (centered)
+    x_center = (max(x) + min(x))/2
+    k = kernel(x - x_center)
+    # kernel fft
+    kf = nft.fft(k)
+    # data fft
+    signal_f = nft.fft(signal)
+    # equidistantly convolved kernel-anti-convolved ifft-ed data
+    # ytac = IFT(FT(\int_{-\inf}^{\inf} y k_{s}(t-x) dx )/FT(k_{h}(t)))
+    signal_ac = nft.fftshift(nft.ifft(signal_f/kf))
+    # signal normalization constant
+    signal_ac_sfc = sum(np.abs(signal_ac)*np.abs(d(x)))
+    # normalization and renormalization
+    return signal_ac * sum(signal*np.abs(d(x)))/signal_ac_sfc
+
+
+def spectrum(x, param_vec, func=kernel('lorentz', unitary=False)) -> np.array:
     result = 0
     for n in range(0, len(param_vec)-2, 3):
         amp, shape_param, x0 = param_vec[n:n+3]
         result += amp*func(shape_param)(x-x0)
-    return result
+    return np.array(result)
 
 
 def residual(x, y, weights=None, func=spectrum):
     if weights is None:
         weights = np.linspace(1, 1, len(x))
 
-    def _res_(param_vec):
-        return (y-spectrum(x, param_vec))/weights
+    def _res_(param_vec) -> np.array:
+        return np.array((y-spectrum(x, param_vec))/weights)
     return _res_
 
 
@@ -138,6 +156,15 @@ def fft_plot(x: np.array, y: np.array, name='FFT', title='', scales="log-log"):
     plt.title(title)
 
 
+def pex_fig(traces):
+    fig = pex.scatter()
+    fig.layout.template = 'plotly_dark'
+    fig.add_traces(traces)
+    layout = {'legend': {'traceorder': 'reversed'}}
+    fig.update_layout(layout)
+    fig.show()
+
+
 # %%
 # Data files reading
 path = ".data/Praca_inzynierska/Badania/200924/polar_si/VV"
@@ -152,7 +179,7 @@ for fname in files:
 xnm = '#Wave'
 ynm = '#Intensity'
 
-mfile_no = 2
+mfile_no = 1
 
 try:
     x = np.array(data[files[mfile_no]][xnm])
@@ -167,44 +194,70 @@ except IndexError:
     raise ValueError(f"Wrong number: mfile_no: {mfile_no}; min: 0; max: 36")
 
 # %%
+# Equidistancing data
 # Convolution of data against equidistant x points can be
-# performed with acceptably high confidence because original
-# x arg was semi-equidistant
+# performed with acceptably high accuracy because original
+# x arg is semi-equidistant
 
-traces_ytac = []
-for hmfw in [1, 2, 5, 10, 20]:
 
-    # getting new x args (equidistant)
-    t = np.array(np.linspace(min(x), max(x), len(x)))
-    # convolving data to fit equidistant x arg
-    hmfw_equid = 1
-    kernel_equid_type = 'gauss'
-    yt = convolve(kernel(kernel_equid_type)(hmfw_equid), x, y, adj=True, t=t)
-    yt = yt * sum(y*np.abs(d(x)))/sum(yt*d(t))
+# getting new x args (equidistant)
+t = np.array(np.linspace(min(x), max(x), len(x)))
+y_sfc = sum(y*np.abs(d(x)))
+# convolving data to fit equidistant x arg
+hmfw_equid = 1
+kernel_equid_type = 'gauss'
+yt = anti_convolve(kernel(kernel_equid_type)(hmfw_equid), t,
+                   convolve(kernel(kernel_equid_type)(hmfw_equid),
+                            x, y, adj=True, t=t))
+yt = np.abs(yt)
 
-    # getting possibly most regular kernel (centered)
-    t_center = (max(t) + min(t))/2
-    kernel_type = 'lorentz'
-    k = kernel(kernel_type)(hmfw)((t - t_center))*(np.pi*hmfw)
-    # kernel fft
-    kf = nft.fft(k)
-    # data fft
-    ytf = nft.fft(yt)
-    # equidistantly convolved kernel-anti-convolved ifft-ed data
-    # ytac = IFT(FT(\int_{-\inf}^{\inf} y k_{s}(t-x) dx )/FT(k_{h}(t)))
-    ytac = np.abs(nft.fftshift(nft.ifft(ytf/kf)))
-    # normalization and renormalization
-    ytac = ytac * sum(y*d(t))/sum(ytac*d(t))
-    # std dist of ytac with moving average
-    hmfw_new = 0.01
-    sytac_type = 'lorentz'
-    sytac = (convolve(kernel(sytac_type)(hmfw_new), t, ytac**2, adj=True) -
-             convolve(kernel(sytac_type)(hmfw_new), t, ytac, adj=True)**2)**0.5
-    traces_ytac += [
+# %%
+# Plotting
+for hmfw in [1,]:
+    # enhancing artifacts
+    ytac = np.abs(anti_convolve(kernel('lorentz')(hmfw), t, yt))
+
+    traces = [
         {
-            'name': f"Anti-conv'd, hmfw: {hmfw}",
+            'name': 'Original data',
+            'x': x,
+            'y': y,
+            'mode': 'markers',
+            'marker': {
+                'size': 1
+            }
+        },
+        {
+            'name': 'Equidistant shift Re',
             'x': t,
-            'y': ytac,
+            'y': yt.real,
+            'mode': 'lines',
+            'line': {
+                'width': 1
+            }
+        },
+        {
+            'name': 'Equidistant shift Im',
+            'x': t,
+            'y': yt.imag,
+            'mode': 'lines',
+            'line': {
+                'width': 1
+            }
+        },
+        {
+            'name': "Anti-conv'd Re",
+            'x': t,
+            'y': ytac.real,
+            'mode': 'lines',
+            'line': {
+                'width': 1
+            }
+        },
+        {
+            'name': "Anti-conv'd Im",
+            'x': t,
+            'y': ytac.imag,
             'mode': 'lines',
             'line': {
                 'width': 1
@@ -212,55 +265,6 @@ for hmfw in [1, 2, 5, 10, 20]:
         },
     ]
 
-# plot
-fig = pex.scatter()
-fig.layout.template = 'plotly_dark'
-traces = [
-    {
-        'name': 'Data',
-        'x': x,
-        'y': y,
-        'mode': 'markers',
-        'marker': {
-            'size': 1
-        }
-    },
-    {
-        'name': 'Equidistant convolved',
-        'x': t,
-        'y': yt,
-        'mode': 'lines',
-        'line': {
-            'dash': 'dash',
-            'width': 1
-        }
-    },
-    # {
-    #     'name': 'Found peak',
-    #     'x': t,
-    #     'y': ytac,
-    #     'mode': 'lines',
-    #     'line': {
-    #         'width': 1
-    #     }
-    # }
-]
-
-traces = traces_ytac + traces
-
-layout = {
-    'legend': {
-        'traceorder': 'reversed'
-    },
-    # 'yaxis': {
-    #     'range': [min(y)*0.9, max(y)*1.1]
-    # }
-}
-
-fig.add_traces(traces[::-1])
-
-fig.update_layout(layout)
-
-fig.show()
+    pex_fig(traces)
 
 # %%
