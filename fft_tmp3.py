@@ -17,13 +17,20 @@ import os
 plt.style.use('dark_background')
 
 # Definitions
+f128 = np.float128
+f64 = np.float64
+mlp = np.multiply
+dvd = np.divide
+pwr = np.power
+add = np.add
+sbt = np.subtract
 
 
-def kernel(ktype='gauss', unitary=True):
+def kernel(ktype='gauss', unitary=True, prec=f64):
 
     def _gauss_(sig):
         """Gaussian curve generator"""
-        amp = unitary*((2*np.pi*sig**2)**-0.5) + (not unitary)*1
+        amp = unitary*((2*np.pi*pwr(sig, 2))**-0.5) + (not unitary)*1
 
         def _gauss_f_(x):
             """Gaussian: exp(- 1/2 * x**2 )"""
@@ -32,11 +39,11 @@ def kernel(ktype='gauss', unitary=True):
 
     def _lorentz_(hmfw):
         """Lorentzian curve generator"""
-        amp = unitary * 1/(np.pi*hmfw) + (not unitary)*1
+        amp = unitary * dvd(1, (np.pi*hmfw)) + (not unitary)*1
 
         def _lorentz_f_(x):
             """Lorentzian: 1/( 1 + x**2 )"""
-            return amp/(1 + (x/hmfw)**2)
+            return dvd(amp, (1 + (x/hmfw)**2))
         return _lorentz_f_
 
     def _fddens_(slope):
@@ -45,7 +52,7 @@ def kernel(ktype='gauss', unitary=True):
 
         def _fddens_f_(x):
             """Logistic: 4/( exp(-x) + 2 + exp(x) )"""
-            return amp/(np.exp(-slope*x) + 2 + np.exp(slope*x))
+            return dvd(amp, (np.exp(-slope*x) + 2 + np.exp(slope*x)))
         return _fddens_f_
 
     class _kernel_:
@@ -75,11 +82,12 @@ def convolve(kernel, x, signal, adj=False, t=None, adjuster=None) -> np.array:
         for ti in t:
             kernel_dint = kernel(x-ti)*np.abs(d(x))
             sig_conv.append(sum(signal*kernel_dint))
-    return np.array(sig_conv)
+    return np.array(sig_conv, dtype=f128)
 
 
-def anti_convolve(kernel, x, signal) -> np.array:
+def deconvolve(kernel, x, signal) -> np.array:
     # getting possibly most regular kernel (centered)
+    # x = np.array(x, dtype=f128)
     x_center = (max(x) + min(x))/2
     k = kernel(x - x_center)
     # kernel fft
@@ -95,11 +103,17 @@ def anti_convolve(kernel, x, signal) -> np.array:
     return signal_ac * sum(signal*np.abs(d(x)))/signal_ac_sfc
 
 
+def conv_variance(kernel, x, signal) -> np.array:
+    yav2 = (convolve(kernel, x, signal, adj=True))**2
+    y2av = (convolve(kernel, x, signal**2, adj=True))
+    return y2av - yav2
+
+
 def spectrum(x, param_vec, func=kernel('lorentz', unitary=False)) -> np.array:
     result = 0
     for n in range(0, len(param_vec)-2, 3):
         amp, shape_param, x0 = param_vec[n:n+3]
-        result += amp*func(shape_param)(x-x0)
+        result += abs(amp)*func(shape_param)(x-x0)
     return np.array(result)
 
 
@@ -165,7 +179,33 @@ def pex_fig(traces):
     fig.show()
 
 
-# %%
+def widen(x, num=0, ix=0):
+    """Widening array by `num` elements, starting from `ix`"""
+    x_f128 = np.array(x, dtype=f128)
+    dx = np.mean(np.diff(x_f128))
+    if num < 0:
+        raise ValueError("Number of added elements `num` cannot be less"
+                         " than 0")
+    # if ix is non negative
+    if 0 <= ix:
+        x_stop = x_f128[-1]
+        x_f128 = np.append(x_f128, np.linspace(x_stop+dx, x_stop+num*dx, num))
+    # if less than zero, split linspaces
+    elif num+ix >= 0:
+        x_start = x_f128[0]
+        x_stop = x_f128[-1]
+        left_lspace = np.linspace(x_start+ix*dx, x_start-dx, abs(ix),
+                                  dtype=f128)
+        right_lspace = np.linspace(x_stop+dx, x_stop+dx*(num+ix), num+ix,
+                                   dtype=f128)
+        x_f128 = np.append(np.append(left_lspace, x_f128), right_lspace)
+    else:
+        raise ValueError("Number of added elements `num` cannot be smaller"
+                         " than absolute value of `ix`")
+    return np.array(x_f128, dtype=x.dtype)
+
+
+# # %%
 # Data files reading
 path = ".data/Praca_inzynierska/Badania/200924/polar_si/VV"
 data = {}
@@ -174,7 +214,7 @@ for fname in files:
     data[fname] = pd.read_csv(op.join(path, fname), sep=r"\t{1,}",
                               header=0, engine='python')
 
-# %%
+# # %%
 # Data extraction
 xnm = '#Wave'
 ynm = '#Intensity'
@@ -193,78 +233,27 @@ try:
 except IndexError:
     raise ValueError(f"Wrong number: mfile_no: {mfile_no}; min: 0; max: 36")
 
-# %%
+# # %%
 # Equidistancing data
 # Convolution of data against equidistant x points can be
 # performed with acceptably high accuracy because original
 # x arg is semi-equidistant
 
-
 # getting new x args (equidistant)
-t = np.array(np.linspace(min(x), max(x), len(x)))
-y_sfc = sum(y*np.abs(d(x)))
+xe = np.array(np.linspace(min(x), max(x), len(x)))
+# boundaries for extendes domain
+xc = (max(x)+min(x))/2.0
+dx = np.mean(np.diff(xe))
+# new range (scaled)
+scale = 2
+t = widen(xe, len(xe), -int(len(xe)/2))
+
 # convolving data to fit equidistant x arg
 hmfw_equid = 1
 kernel_equid_type = 'gauss'
-yt = anti_convolve(kernel(kernel_equid_type)(hmfw_equid), t,
-                   convolve(kernel(kernel_equid_type)(hmfw_equid),
-                            x, y, adj=True, t=t))
-yt = np.abs(yt)
-
-# %%
-# Plotting
-for hmfw in [1,]:
-    # enhancing artifacts
-    ytac = np.abs(anti_convolve(kernel('lorentz')(hmfw), t, yt))
-
-    traces = [
-        {
-            'name': 'Original data',
-            'x': x,
-            'y': y,
-            'mode': 'markers',
-            'marker': {
-                'size': 1
-            }
-        },
-        {
-            'name': 'Equidistant shift Re',
-            'x': t,
-            'y': yt.real,
-            'mode': 'lines',
-            'line': {
-                'width': 1
-            }
-        },
-        {
-            'name': 'Equidistant shift Im',
-            'x': t,
-            'y': yt.imag,
-            'mode': 'lines',
-            'line': {
-                'width': 1
-            }
-        },
-        {
-            'name': "Anti-conv'd Re",
-            'x': t,
-            'y': ytac.real,
-            'mode': 'lines',
-            'line': {
-                'width': 1
-            }
-        },
-        {
-            'name': "Anti-conv'd Im",
-            'x': t,
-            'y': ytac.imag,
-            'mode': 'lines',
-            'line': {
-                'width': 1
-            }
-        },
-    ]
-
-    pex_fig(traces)
+ye = deconvolve(kernel(kernel_equid_type)(hmfw_equid), xe,
+                convolve(kernel(kernel_equid_type)(hmfw_equid),
+                         x, y, adj=True, t=xe))
+ye = np.abs(ye)
 
 # %%
