@@ -1,5 +1,6 @@
 # %%
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 
 from mpl_toolkits.mplot3d import Axes3D
@@ -9,7 +10,7 @@ from matplotlib.ticker import (MultipleLocator,
                                AutoMinorLocator)
 # api for data extraction
 import data_import as di
-# api for convolutions and fft
+# api for convolutions and fft (top layer of numpy fft)
 import spectrals as sp
 
 # global settings for datafiles
@@ -24,6 +25,8 @@ di.get_data()
 
 # global setting for plot style
 plt.style.use('classic')
+# plt.style.use('default')
+# plt.style.use('')
 
 
 def polygon(a, b, botlim=0):
@@ -33,8 +36,13 @@ def polygon(a, b, botlim=0):
 
 # data lines averages
 x_av, y_av = np.mean(list(di.DATA.values()), 0).T
-# data lines std devs
+# equidistancing averages
+x_av, y_av = sp.equidist_data(x_av, y_av, deconv=True)
+# data lines stddevs
 x_sd, y_sd = np.std(list(di.DATA.values()), 0).T
+# equidistancing stddev
+_, y_sd = sp.equidist_data(x_av, y_sd, deconv=True)
+
 
 # %%
 fig = plt.figure(figsize=[10, 10])
@@ -57,9 +65,7 @@ for fnr in range(37):
     if y_max < max(y[fltr]):
         y_max = max(y[fltr])
 
-# average plot - peaks and more
-fltr = x_av > 200
-ax.plot(x_av[fltr], y_sd[fltr], zs=370, zdir='y')
+
 
 # settings for all axes
 label_kwargs = dict(usetex=True, fontsize=15, fontweight='bold')

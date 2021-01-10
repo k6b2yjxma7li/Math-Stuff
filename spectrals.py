@@ -1,4 +1,3 @@
-# %%
 from scipy.optimize import least_squares, leastsq
 from nano.functions import d, div
 
@@ -190,3 +189,22 @@ def widen(x, num=0, ix=0):
         raise ValueError("Number of added elements `num` cannot be smaller"
                          " than absolute value of `ix`")
     return np.array(x_f128, dtype=x.dtype)
+
+
+def equidist_arg(t):
+    """Generating equidistant points from arbitrary set"""
+    return np.linspace(t[0], t[-1], len(t))
+
+
+def equidist_data(u, v, kernel_eq=None, deconv=False):
+    """Transformation of data points to fit equidistant positions"""
+    t = equidist_arg(u)
+    dt = np.mean(np.diff(t))
+    if kernel_eq is None:
+        # three sigma per one point
+        kernel_eq = kernel()(dt/3)
+    v_eq = convolve(kernel_eq, u, v, adj=True, t=t)
+    if deconv:
+        return t, deconvolve(kernel_eq, t, v_eq)
+    else:
+        return t, v_eq
