@@ -16,6 +16,8 @@ import re
 import sys
 import warnings
 
+import pandas as pd
+
 import plotly.express as pex
 import plotly.subplots as psp
 import plotly.graph_objects as pgo
@@ -180,6 +182,9 @@ elif '-d' in sys.argv:
     directions = [sys.argv[dix+1]]
 else:
     directions = ['VV', 'VH']
+
+df_rad = pd.DataFrame()
+
 # main loop
 for direct in directions:
     measure = config[material]['measure']
@@ -959,6 +964,17 @@ for direct in directions:
     ]
     # adding traces to global storage (for later use)
     config[material]['polar'] += traces
+    for tr in traces:
+        if 'VV' in tr['name']:
+            col_name = tr['name'].replace(' band ', '')
+            print(col_name)
+            df_rad[col_name] = tr['r']
+            # print(tr['r'])
+        if 'VH' in tr['name']:
+            # print(tr['r'])
+            col_name = tr['name'].replace(' band ', '')
+            print(col_name)
+            df_rad[col_name] = tr['r']
 
     layout = {
         'title': 'Polar intensity of peaks (not normalised)',
@@ -982,6 +998,7 @@ for direct in directions:
         fig_polar.show(config=pltconf)
 
     fig_polar.write_html(f"./polar_{material}_{direct}.html")
+df_rad.to_csv(f"rad_{material}.csv", index=False)
 # %%
 if material == 'si':
     print("Intensity polar Si")

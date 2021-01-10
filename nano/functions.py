@@ -51,7 +51,7 @@ def converter(filepath,
                                 " directory!")
 
 
-def nearest_val(iterable, value):
+def nearest_val(iterable, value, sorter=lambda k: k):
     """
     `nano`.`nearest_val`
     ===
@@ -66,7 +66,7 @@ def nearest_val(iterable, value):
     iterable = np.array(iterable)
     abs_iter = list(np.abs(iterable - value))
     # index = range(len(abs_iter))
-    s = sorted(abs_iter)
+    s = sorted(abs_iter, key=sorter)
     return (abs_iter.index(d) for d in s)
 
 

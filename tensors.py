@@ -4,10 +4,12 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 
 plt.style.use('default')
+polar_conf = 'VH'
 # mpl.rcParams['text.usetex'] = True
 
 
-def tensor_plot(theta: np.array, v_inc: np.array, tensor_fun, name=None):
+def tensor_plot(theta: np.array, v_inc: np.array, tensor_fun, name=None,
+                config='VV'):
 
     if '__len__' not in dir(tensor_fun):
         tensor_fun = [tensor_fun]
@@ -29,12 +31,19 @@ def tensor_plot(theta: np.array, v_inc: np.array, tensor_fun, name=None):
         fig.suptitle(r'Tensor '+name, usetex=True)
         plt.subplots_adjust(top=0.8)
     id = 100 + 10*len(tensor_fun)
+    R = np.array([[0, 1, 0],
+                  [1, 0, 0],
+                  [0, 0, 1]])
     for nr, tensor in enumerate(tensor_fun):
-        intensity = v_inc.dot(tensor_fun[nr](1).dot(v_inc))**2
+        if config == 'VV':
+            intensity = v_inc.dot(tensor_fun[nr](1).dot(v_inc))**2
+        elif config == 'VH':
+            intensity = R.dot(v_inc).dot(tensor_fun[nr](1).dot(v_inc))**2
         ax.append(plt.subplot(id + nr + 1, projection='polar'))
         ax[nr].set_yticklabels([])
         ax[nr].plot(theta, intensity, lw=2)
-        if max(intensity) > 0:
+        # requirement for 64bit numpy floats
+        if max(intensity) > 1e-16:
             ax[nr].set_ylim(min(intensity)*0.001, max(intensity)*1.1)
         else:
             ax[nr].set_ylim(-0.001, 1.1)
@@ -73,17 +82,17 @@ T_2z = lambda a: np.array([[0, a, 0],
 ftype = '.png'
 dpi = 100
 
-tensor_plot(t, ei, A_1, 'A_1')
+tensor_plot(t, ei, A_1, 'A_1', config=polar_conf)
 plt.savefig('a1_mode'+ftype, dpi=dpi)
 
-tensor_plot(t, ei, [E1, E2], 'E')
+tensor_plot(t, ei, [E1, E2], 'E', config=polar_conf)
 plt.savefig('e_mode'+ftype, dpi=dpi)
 
-tensor_plot(t, ei, T_2x, 'T_2(x)')
+tensor_plot(t, ei, T_2x, 'T_2(x)', config=polar_conf)
 plt.savefig('t2x_mode'+ftype, dpi=dpi)
-tensor_plot(t, ei, T_2y, 'T_2(y)')
+tensor_plot(t, ei, T_2y, 'T_2(y)', config=polar_conf)
 plt.savefig('t2y_mode'+ftype, dpi=dpi)
-tensor_plot(t, ei, T_2z, 'T_2(z)')
+tensor_plot(t, ei, T_2z, 'T_2(z)', config=polar_conf)
 plt.savefig('t2z_mode'+ftype, dpi=dpi)
 
 # %%
