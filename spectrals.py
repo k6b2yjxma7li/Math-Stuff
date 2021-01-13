@@ -58,7 +58,7 @@ def kernel(ktype='gauss', unitary=True, prec=f64):
     return getattr(_kernel_, ktype)
 
 
-def convolve(kernel, x, signal, adj=False, t=None, adjuster=None) -> np.array:
+def convolve(kernel, x, signal, adj=True, t=None, adjuster=None) -> np.array:
     sig_conv = []
     if t is None:
         t = x.copy()
@@ -98,9 +98,9 @@ def deconvolve(kernel, x, signal) -> np.array:
     return signal_ac * sum(signal*np.abs(d(x)))/signal_ac_sfc
 
 
-def conv_variance(kernel, x, signal) -> np.array:
-    yav2 = (convolve(kernel, x, signal, adj=True))**2
-    y2av = (convolve(kernel, x, signal**2, adj=True))
+def conv_variance(kernel, x, signal, adj=True) -> np.array:
+    yav2 = (convolve(kernel, x, signal, adj=adj))**2
+    y2av = (convolve(kernel, x, signal**2, adj=adj))
     return y2av - yav2
 
 
@@ -208,3 +208,9 @@ def equidist_data(u, v, kernel_eq=None, deconv=False):
         return t, deconvolve(kernel_eq, t, v_eq)
     else:
         return t, v_eq
+
+
+def base_line(x, y, kern=kernel(), sd_scale=10, av_scale=100, adj=True):
+    dx = np.mean(np.diff(x))
+    y_sd = conv_variance(kern(sd_scale*dx), x, y, adj=adj)
+    return convolve(lambda x: kern(av_scale*dx)(x)/y_sd, x, y, adj=adj)

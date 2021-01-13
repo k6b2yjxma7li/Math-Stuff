@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 
 plt.style.use('default')
-polar_conf = 'VH'
+polar_conf = 'VV'
 # mpl.rcParams['text.usetex'] = True
 
 
@@ -51,7 +51,7 @@ def tensor_plot(theta: np.array, v_inc: np.array, tensor_fun, name=None,
 
 
 ## %%
-n_steps = 100
+n_steps = 360
 t = np.arange(0, 2*np.pi*(1+1/n_steps), 2*np.pi/n_steps)
 ei = np.array([np.cos(t), np.sin(t), 0])
 
