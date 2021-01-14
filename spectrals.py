@@ -105,7 +105,7 @@ def conv_variance(kernel, x, signal, adj=True) -> np.array:
 
 
 def spectrum(x, param_vec, func=kernel('lorentz', unitary=False)) -> np.array:
-    result = 0
+    result = np.zeros(len(x))
     for n in range(0, len(param_vec)-2, 3):
         amp, shape_param, x0 = param_vec[n:n+3]
         result += abs(amp)*func(shape_param)(x-x0)

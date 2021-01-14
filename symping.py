@@ -13,7 +13,7 @@ sys.modules['sympy.mpmath'] = mpmath
 
 component = 'VH'
 
-a, b, c, d, p, t = sm.symbols('a b c d p t')
+a, b, c, d, p, t = sm.symbols(r'a b c d \phi \theta')
 
 # symbol matrices
 A_1 = smm.Matrix([[a, 0, 0],
@@ -128,6 +128,6 @@ def IE_np(Em, b_param, p_param, t_param):
 
 
 def IT2_np(Em, d_param, p_param, t_param):
-    return sm.lambdify([d, p, t], I_A1(Em),
+    return sm.lambdify([d, p, t], I_T2(Em),
                        'numpy')(d_param, p_param, t_param)[0][0]
 # %%

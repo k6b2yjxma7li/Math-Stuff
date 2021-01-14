@@ -13,12 +13,13 @@ import matplotlib.gridspec as mgs
 import data_import as di
 # api for convolutions and fft (top layer of numpy fft)
 import spectrals as sp
-from spectrals import d
+from spectrals import d, kernel, spectrum, residual
+
 # fitting
 from scipy.optimize import leastsq
 
 # global settings for datafiles
-dset = "VV"
+dset = "VH"
 di.PATH = f".data/Praca_inzynierska/Badania/200924/polar_si/{dset}"
 di.XNAME = "#Wave"
 di.YNAME = "#Intensity"
@@ -52,7 +53,7 @@ for col in intensities:
         polar_data += np.array(intensities[col])
 
 
-# # %%
+# %%
 # Proper plotting
 fig = plt.figure(figsize=(12, 8))
 plot_gs = mgs.GridSpec(nrows=3, ncols=2, figure=fig)
@@ -204,18 +205,55 @@ fig.show()
 fig.savefig(f"all_3d_{dset}.png", dpi=300, bbox_inches='tight')
 
 # %%
+fltr = ((400 < x_av).astype(int)*(x_av < 600).astype(int)).astype(bool)
+y_data = y_av[fltr]
+x_data = x_av[fltr]
+p_init = [10000, 2, 525,
+          20000, 2, 520,
+          10000, 2, 515,
+          5000, 1000, 520]
+p, h = leastsq(residual(x_data, y_data, func=spectrum), p_init)
+
+fig, ax = plt.subplots()
+ax.plot(x_data, y_data, '.', ms=3, color='black', label='Zmierzone widmo')
+
+t = np.arange(min(x_data), max(x_data), 0.1)
+
+ax.plot(t, spectrum(t, p), lw=1, color='black',
+        label="Dopasowanie")
+
+
+for nr in range(0, len(p)-2, 3):
+    # print(nr, nr+3)
+    if np.log10(np.abs(p[nr+1])) < 1.5 and np.log10(np.abs(p[nr])) > -0.5:
+        ax.plot(t, spectrum(t, p[nr:nr+3]), '--', color='black')
+ax.legend()
+ax.set_xlabel(r'$\Delta\nu [\mathrm{cm^{-1}}]$')
+ax.set_ylabel('Amplituda [j.u.]')
+ax.set_yticks([])
+fig.show()
+
+res_vec = residual(x_data, y_data)(p)
+print(res_vec.dot(res_vec))
+
+fig.savefig(f"./lorentz_fitting.png", dpi=300, bbox_inches='tight')
+
+# %%
 fig = plt.figure(figsize=[6, 6])
 ax = fig.add_subplot(111, projection='polar')
 dphi = np.pi/18
 phi = np.arange(0, 2*np.pi+dphi, dphi)
 
+
 def fit_fun(x, p):
     return (p[0]*np.cos(2*(x + p[1])))**2
+
 
 def res(p):
     return polar_data - fit_fun(phi, p)
 
-ax.plot(phi, polar_data, '.', ms=2, color='black')
+
+ax.plot(phi, polar_data, '.', ms=3, color='black')
 ax.set_yticklabels([])
 p, h = leastsq(res, [1000, 0.1])
 
@@ -223,6 +261,7 @@ d_th = np.pi/180
 
 theta = np.arange(0, 2*np.pi+d_th, d_th)
 
-ax.plot(theta, fit_fun(theta, p), )
+ax.plot(theta, fit_fun(theta, p), color='black', lw=0.7)
+fig.show()
 
 # %%
