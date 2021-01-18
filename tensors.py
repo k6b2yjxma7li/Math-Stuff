@@ -61,35 +61,41 @@ def tensor_plot(theta: np.array, v_inc: np.array, tensor_fun, name=None,
     fig.show()
 
 
-## %%
 n_steps = 360
 t = np.arange(0, 2*np.pi*(1+1/n_steps), 2*np.pi/n_steps)
 ei = np.array([np.cos(t), np.sin(t), 0])
 
-A_1 = lambda a: np.array([[a, 0, 0],
-                          [0, a, 0],
-                          [0, 0, a]])
 
-E1 = lambda a: np.array([[a, 0, 0],
-                         [0, a, 0],
-                         [0, 0, -2*a]])
+def A_1(a): return np.array([[a, 0, 0],
+                            [0, a, 0],
+                            [0, 0, a]])
 
-E2 = lambda a: np.array([[-3**0.5 * a, 0, 0],
-                         [0, 3**0.5 * a, 0],
-                         [0, 0, 0]])
 
-T_2x = lambda a: np.array([[0, 0, 0],
-                           [0, 0, a],
-                           [0, a, 0]])
+def E1(a): return np.array([[a, 0, 0],
+                            [0, a, 0],
+                            [0, 0, -2*a]])
 
-T_2y = lambda a: np.array([[0, 0, a],
-                           [0, 0, 0],
-                           [a, 0, 0]])
 
-T_2z = lambda a: np.array([[0, a, 0],
-                           [a, 0, 0],
-                           [0, 0, 0]])
-## %%
+def E2(a): return np.array([[-3**0.5 * a, 0, 0],
+                            [0, 3**0.5 * a, 0],
+                            [0, 0, 0]])
+
+
+def T_2x(a): return np.array([[0, 0, 0],
+                              [0, 0, a],
+                              [0, a, 0]])
+
+
+def T_2y(a): return np.array([[0, 0, a],
+                              [0, 0, 0],
+                              [a, 0, 0]])
+
+
+def T_2z(a): return np.array([[0, a, 0],
+                              [a, 0, 0],
+                              [0, 0, 0]])
+
+
 ftype = '.png'
 dpi = 100
 
