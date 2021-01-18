@@ -130,4 +130,15 @@ def IE_np(Em, b_param, p_param, t_param):
 def IT2_np(Em, d_param, p_param, t_param):
     return sm.lambdify([d, p, t], I_T2(Em),
                        'numpy')(d_param, p_param, t_param)[0][0]
+
+
+# %%
+phi0 = sm.Symbol(r'\phi_0')
+
+Intensity = ((Em_VV.T*R_z(phi0)*T_2x*R_z(phi0).T*Ei)**2 +
+             (Em_VV.T*R_z(phi0)*T_2y*R_z(phi0).T*Ei)**2 +
+             (Em_VV.T*R_z(phi0)*T_2z*R_z(phi0).T*Ei)**2)
+
+Intensity = sm.simplify(Intensity).subs({t: sm.pi/2})
+
 # %%

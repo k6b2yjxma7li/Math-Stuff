@@ -1,11 +1,18 @@
 # %%
 import numpy as np
+import numpy.linalg as la
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
 plt.style.use('default')
 polar_conf = 'VV'
 # mpl.rcParams['text.usetex'] = True
+
+
+def R_psi(psi):
+    return np.array([[np.cos(psi), -np.sin(psi), 0],
+                    [np.sin(psi), np.cos(psi), 0],
+                    [0, 0, 1]])
 
 
 def tensor_plot(theta: np.array, v_inc: np.array, tensor_fun, name=None,
@@ -31,14 +38,18 @@ def tensor_plot(theta: np.array, v_inc: np.array, tensor_fun, name=None,
         fig.suptitle(r'Tensor '+name, usetex=True)
         plt.subplots_adjust(top=0.8)
     id = 100 + 10*len(tensor_fun)
-    R = np.array([[0, 1, 0],
-                  [1, 0, 0],
-                  [0, 0, 1]])
+    R = R_psi(-np.pi/2)
+    phi = -np.pi/6
+    Rp = R_psi(phi)
+    Rpi = la.inv(R_psi(phi))
     for nr, tensor in enumerate(tensor_fun):
         if config == 'VV':
-            intensity = v_inc.dot(tensor_fun[nr](1).dot(v_inc))**2
+            intensity = (v_inc.dot(Rp.dot(tensor_fun[nr](1)).dot(Rpi).
+                         dot(v_inc))**2)
         elif config == 'VH':
-            intensity = R.dot(v_inc).dot(tensor_fun[nr](1).dot(v_inc))**2
+            v_vh = R.dot(v_inc)
+            intensity = (v_vh.dot(Rp.dot(tensor_fun[nr](1)).dot(Rpi).
+                                  dot(v_inc))**2)
         ax.append(plt.subplot(id + nr + 1, projection='polar'))
         ax[nr].set_yticklabels([])
         ax[nr].plot(theta, intensity, lw=2)

@@ -6,6 +6,7 @@ import plotly.subplots as psp
 import plotly.express as pex
 import pandas as pd
 import numpy as np
+import numpy.linalg as la
 import os
 
 
@@ -109,8 +110,10 @@ def response(data, tensors, polarization='VV'):
             t_param_ix += tnr+1
         # for each real tensor response is calculated
         # and added to overall response
+        Rt = R_psi(psi0)
+        Rti = la.inv(Rt)
         for tensor_value in tenors_evaluated:
-            Es += R_psi(psi0).dot(tensor_value).dot(Ei)
+            Es += Rt.dot(tensor_value).dot(Rti).dot(Ei)
         # measurement values of intensity
         Em = np.sum(R.dot(uni_m) * Es, 0)**2
         return data - Em
@@ -134,19 +137,18 @@ tensors = [[[np.array([[0, 0, 0], [0, 0, 1], [0, 1, 0]])],
             [np.array([[0, 0, 1], [0, 0, 0], [1, 0, 0]])],
             [np.array([[0, 1, 0], [1, 0, 0], [0, 0, 0]])]]]
 
-starting = list(k_vec(*[0, 0, -1]))+[0, 1000]+[1]
-par, h = leastsq(response(data_result, tensors, p_type), starting)
+# starting = list(k_vec(*[0, 0, -1]))+[0, 1000]+[1]
+# par, h = leastsq(response(data_result, tensors, p_type), starting)
 
 # # %%
 # Incident light wave vector
 k = np.array([0.2, -0.2, -1])
 
-# phi, theta, psi = k_vec(*k)
-phi, theta, psi, psi0, k = par[:5]
+phi, theta, psi = k_vec(*k)
+# phi, theta, psi, psi0, k = par[:5]
 
-d, = par[5:]
+# d, = par[5:]
 
-R_i = (R_phi(phi).dot(R_theta(theta)).dot(R_psi(psi)))
 R = R_phi(phi).dot(R_theta(theta)).dot(R_psi(psi))
 
 a, b = 1, 1
@@ -227,9 +229,9 @@ if '__len__' in dir(k):
 else:
     Eik = uni.copy() * k
 # incident field vectors
-Ei = R_i.dot(Eik)
+Ei = R.dot(Eik)
 # measurement vectors
-uni_m = R_i.dot(uni)
+uni_m = R.dot(uni)
 
 Es = np.array([np.zeros(len(t)),
                np.zeros(len(t)),
@@ -238,7 +240,7 @@ Es = np.array([np.zeros(len(t)),
 # response vectors, R_psi is a mode tensor rotation around z-axis
 modes = ['T2x', 'T2y', 'T2z']
 for md in modes:
-    Es += R_psi(psi0).dot(mode[md]).dot(Ei)
+    Es += R_psi(psi0).dot(mode[md]).dot(la.inv(R_psi(psi0))).dot(Ei)
 
 # measurement values
 if p_type == 'VV':
@@ -455,7 +457,7 @@ traces = [
     }
 ]
 
-real_response = R_i.dot(uni)*data_result
+real_response = R.dot(uni)*data_result
 data_traces = [
     {
         'x': real_response[0],

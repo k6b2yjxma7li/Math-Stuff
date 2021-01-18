@@ -104,20 +104,23 @@ def conv_variance(kernel, x, signal, adj=True) -> np.array:
     return y2av - yav2
 
 
-def spectrum(x, param_vec, func=kernel('lorentz', unitary=False)) -> np.array:
-    result = np.zeros(len(x))
+def spectrum(x, param_vec, func=None, prec=f128) -> np.array:
+    if func is None:
+        func = kernel('lorentz', unitary=False, prec=prec)
+    result = np.zeros(len(x), dtype=prec)
     for n in range(0, len(param_vec)-2, 3):
         amp, shape_param, x0 = param_vec[n:n+3]
         result += abs(amp)*func(shape_param)(x-x0)
-    return np.array(result)
+    return np.array(result, dtype=prec)
 
 
-def residual(x, y, weights=None, func=spectrum):
+def residual(x, y, weights=None, func=spectrum, prec=f128):
+    x, y = x.astype(prec), y.astype(prec)
     if weights is None:
-        weights = np.linspace(1, 1, len(x))
+        weights = np.linspace(1, 1, len(x)).astype(prec)
 
-    def _res_(param_vec) -> np.array:
-        return np.array((y-spectrum(x, param_vec))/weights)
+    def _res_(param_vec, prec=prec) -> np.array:
+        return np.array((y-spectrum(x, param_vec, prec=prec))/weights)
     return _res_
 
 

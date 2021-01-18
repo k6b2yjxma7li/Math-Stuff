@@ -18,9 +18,14 @@ from spectrals import d, kernel, spectrum, residual
 # fitting
 from scipy.optimize import leastsq
 
+# checked equations and functions based on them
+import symping as sy
+from arc import arc_2D
+
+
 # global settings for datafiles
-dset = "VH"
-di.PATH = f".data/Praca_inzynierska/Badania/200924/polar_si/{dset}"
+dset = "VV"
+di.PATH = f".data/Praca_inzynierska/Badania/190726/polar_grf/{dset}"
 di.XNAME = "#Wave"
 di.YNAME = "#Intensity"
 
@@ -31,8 +36,6 @@ di.get_data()
 
 # global setting for plot style
 plt.style.use('default')
-# plt.style.use('default')
-# plt.style.use('')
 
 
 def polygon(a, b, botlim=0):
@@ -46,7 +49,7 @@ x_av, y_av = np.mean(list(di.DATA.values()), 0).T
 x_sd, y_sd = np.std(list(di.DATA.values()), 0).T
 
 # intensity measures
-intensities = pd.read_csv("./rad_si.csv")
+intensities = pd.read_csv("./rad_grf.csv")
 polar_data = 0
 for col in intensities:
     if dset in col:
@@ -54,6 +57,7 @@ for col in intensities:
 
 
 # %%
+# PART 1 -- showing all datasets
 # Proper plotting
 fig = plt.figure(figsize=(12, 8))
 plot_gs = mgs.GridSpec(nrows=3, ncols=2, figure=fig)
@@ -161,7 +165,7 @@ ax.xaxis.set_tick_params(which='minor', length=2)
 
 # camera settings
 ax.elev = 20
-ax.azim = -60
+ax.azim = -120
 ax.dist = 10
 
 # 3d box grid settings
@@ -205,6 +209,7 @@ fig.show()
 fig.savefig(f"all_3d_{dset}.png", dpi=300, bbox_inches='tight')
 
 # %%
+# PART 2 -- showing lorentzian fitting
 fltr = ((400 < x_av).astype(int)*(x_av < 600).astype(int)).astype(bool)
 y_data = y_av[fltr]
 x_data = x_av[fltr]
@@ -239,21 +244,34 @@ print(res_vec.dot(res_vec))
 fig.savefig(f"./lorentz_fitting.png", dpi=300, bbox_inches='tight')
 
 # %%
+# PART 3 -- fitting to intensity
 fig = plt.figure(figsize=[6, 6])
 ax = fig.add_subplot(111, projection='polar')
+ax.set_title(f"Składowa {dset}")
 dphi = np.pi/18
 phi = np.arange(0, 2*np.pi+dphi, dphi)
 
-
-def fit_fun(x, p):
-    return (p[0]*np.cos(2*(x + p[1])))**2
+if dset == 'VV':
+    def fit_fun(x, p):
+        if len(p) > 2:
+            theta = p[2]
+        else:
+            theta = np.pi/2
+        return sy.IT2_np(sy.Em_VV, p[0], x-p[1] % np.pi, theta)
+if dset == 'VH':
+    def fit_fun(x, p):
+        if len(p) > 2:
+            theta = p[2]
+        else:
+            theta = np.pi/2
+        return sy.IT2_np(sy.Em_VH, p[0], x-p[1] % np.pi, theta)
 
 
 def res(p):
     return polar_data - fit_fun(phi, p)
 
 
-ax.plot(phi, polar_data, '.', ms=3, color='black')
+ax.plot(phi, polar_data, '.', ms=3, color='black', label="Intensywność")
 ax.set_yticklabels([])
 p, h = leastsq(res, [1000, 0.1])
 
@@ -261,7 +279,22 @@ d_th = np.pi/180
 
 theta = np.arange(0, 2*np.pi+d_th, d_th)
 
-ax.plot(theta, fit_fun(theta, p), color='black', lw=0.7)
+ax.plot(theta, fit_fun(theta, p), color='black', lw=0.7, label="Dopasowanie")
+ax.quiver(*[0, 0], *[0, max(polar_data)*1.1], scale=1, scale_units='xy',
+          angles='xy', color='grey')
+ax.set_ylim(0, max(polar_data)*1.1)
+ax.legend()
 fig.show()
+phi_min = abs((p[1] % np.pi)) - np.pi
+ax.quiver(*[0, 0], *[phi_min, max(polar_data)*1.1], scale=1, scale_units='xy',
+          angles='xy', color='black')
 
+arc_2D(ax, [0, 0], [3*max(polar_data)/4, 0], phi_min, text=r'$\phi_0$',
+       projection='polar', color='black', lw=0.7, ls='--')
+
+print(f"Phi0 {180*phi_min/np.pi} deg.")
+if len(p) > 2:
+    theta_min = abs(180*(p[2] % np.pi)/np.pi)
+    print(f"Theta {theta_min} deg.")
+fig.savefig(f'polar_w_fit_{dset}.png', dpi=300, bbox_inches='tight')
 # %%
