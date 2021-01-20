@@ -13,6 +13,7 @@ Y = None
 XNAME = ""
 YNAME = ""
 FILES = []
+FILTER = slice(0, None)
 
 
 def read_dir(ext="", sorting=lambda nm: nm):
@@ -43,14 +44,14 @@ def read_dir(ext="", sorting=lambda nm: nm):
 
 
 def get_data(file_name=None, file_no=0):
-    global X, Y, XNAME, YNAME, DATA, FILES
+    global X, Y, XNAME, YNAME, DATA, FILES, FILTER
     try:
         if file_name is not None:
-            X = np.array(DATA[file_name][XNAME])
-            Y = np.array(DATA[file_name][YNAME])
+            X = np.array(DATA[file_name][XNAME])[FILTER]
+            Y = np.array(DATA[file_name][YNAME])[FILTER]
         elif len(DATA) > 0 and len(FILES) > 0:
-            X = np.array(DATA[FILES[file_no]][XNAME])
-            Y = np.array(DATA[FILES[file_no]][YNAME])
+            X = np.array(DATA[FILES[file_no]][XNAME])[FILTER]
+            Y = np.array(DATA[FILES[file_no]][YNAME])[FILTER]
         else:
             raise IndexError(f"No data to get, DATA is {DATA}")
     except IndexError:

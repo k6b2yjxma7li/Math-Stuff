@@ -38,7 +38,7 @@ def kernel(ktype='gauss', unitary=True, prec=f64):
 
         def _lorentz_f_(x):
             """Lorentzian: 1/( 1 + x**2 )"""
-            return dvd(amp, (1 + (x/hmfw)**2))
+            return dvd(amp, (1 + (mlp(2, x)/hmfw)**2))
         return _lorentz_f_
 
     def _fddens_(slope):
