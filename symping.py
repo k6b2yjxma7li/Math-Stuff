@@ -16,6 +16,7 @@ component = 'VH'
 a, b, c, d, p, t = sm.symbols(r'a b c d \phi \theta')
 
 # symbol matrices
+# si
 A_1 = smm.Matrix([[a, 0, 0],
                   [0, a, 0],
                   [0, 0, a]])
@@ -38,6 +39,19 @@ T_2y = smm.Matrix([[0, 0, d],
 
 T_2z = smm.Matrix([[0, d, 0],
                    [d, 0, 0],
+                   [0, 0, 0]])
+
+# grf/hbn
+A1g = smm.Matrix([[a, 0, 0],
+                  [0, a, 0],
+                  [0, 0, b]])
+
+E2g1 = smm.Matrix([[0, -d, 0],
+                   [-d, 0, 0],
+                   [0, 0, 0]])
+
+E2g2 = smm.Matrix([[d, 0, 0],
+                   [0, -d, 0],
                    [0, 0, 0]])
 
 
@@ -112,6 +126,20 @@ def I_E(Em): return sm.trigsimp(I_E1(Em) + I_E2(Em))
 def I_A1(Em): return sm.trigsimp((Em.T * A_1 * Ei)**2)
 
 
+# A1g tensor
+def I_A1g(Em): return sm.trigsimp((Em.T * A1g * Ei)**2)
+
+
+# E2g mode
+def I_E2g1(Em): return (Em.T * E2g1 * Ei)**2
+
+
+def I_E2g2(Em): return (Em.T * E2g2 * Ei)**2
+
+
+def I_E2g(Em): return I_E2g1(Em) + I_E2g2(Em)
+
+
 # Numpy type lambdas to calculate proper tensor representations
 def IA1_np(Em, a_param, p_param, t_param):
     try:
@@ -130,6 +158,16 @@ def IE_np(Em, b_param, p_param, t_param):
 def IT2_np(Em, d_param, p_param, t_param):
     return sm.lambdify([d, p, t], I_T2(Em),
                        'numpy')(d_param, p_param, t_param)[0][0]
+
+
+def IA1g_np(Em, a_param, b_param, p_param, t_param):
+    return sm.lambdify([a, b, p, t],
+                       I_A1g(Em), 'numpy')(a_param, b_param, p_param, t_param)
+
+
+def IE2g_np(Em, d_param, p_param, t_param):
+    return sm.lambdify([d, p, t], I_E2g(Em),
+                       'numpy')(d_param, p_param, t_param)
 
 
 # %%

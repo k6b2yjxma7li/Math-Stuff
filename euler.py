@@ -148,8 +148,11 @@ phi, theta, psi = k_vec(*k)
 # phi, theta, psi, psi0, k = par[:5]
 
 # d, = par[5:]
+d = 1
+psi0 = np.pi/2
 
 R = R_phi(phi).dot(R_theta(theta)).dot(R_psi(psi))
+Ri = R_psi(psi).T.dot(R_theta(theta).T).dot(R_phi(phi).T)
 
 a, b = 1, 1
 # rotating tensor around Z axis
@@ -238,7 +241,7 @@ Es = np.array([np.zeros(len(t)),
                np.zeros(len(t))])
 
 # response vectors, R_psi is a mode tensor rotation around z-axis
-modes = ['T2x', 'T2y', 'T2z']
+modes = ['E2g1', 'E2g2']
 for md in modes:
     Es += R_psi(psi0).dot(mode[md]).dot(la.inv(R_psi(psi0))).dot(Ei)
 
@@ -460,17 +463,17 @@ traces = [
 real_response = R.dot(uni)*data_result
 data_traces = [
     {
-        'x': real_response[0],
-        'y': real_response[1],
-        'z': real_response[2],
-        'text': txt,
-        'type': 'scatter3d',
-        'mode': 'lines',
-        'line': {
-            'color': 'white',
-            'width': 2
-        },
-        'name': 'Data'
+        # 'x': real_response[0],
+        # 'y': real_response[1],
+        # 'z': real_response[2],
+        # 'text': txt,
+        # 'type': 'scatter3d',
+        # 'mode': 'lines',
+        # 'line': {
+        #     'color': 'white',
+        #     'width': 2
+        # },
+        # 'name': 'Data'
     }
 ]
 
@@ -505,5 +508,11 @@ fig.add_traces(basis + endpoints + traces + data_traces)
 fig.update_layout(layout)
 
 fig.show()
+
+# %%
+import matplotlib.pyplot as plt
+resp = response(np.linspace(0, 0, len(t)), [[[E2g1], [E2g2]]])
+
+plt.polar(t, -resp(list(k_vec(*[0, 0, -1]))+[0, 1, 1]))
 
 # %%

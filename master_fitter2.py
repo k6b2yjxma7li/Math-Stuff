@@ -38,11 +38,12 @@ def main(tag, *args, **kwargs):
 
 def compound_plot(x, pars, bands=None):
     rc_color = iter(plt.rcParams['axes.prop_cycle'].by_key()['color'])
-    plt.plot(x, sp.spectrum(x, params), color=next(rc_color))
-    bands = np.array(bands, dtype=bool)
+    plt.plot(x, sp.spectrum(x, pars), color=next(rc_color))
     # setting band selectors
     if bands is None:
         bands = np.array([np.linspace(0, 0, int(len(params)/3), dtype=bool)])
+    else:
+        bands = np.array(bands, dtype=bool)
     # acquiring color for each existing band
     band_colors = [next(rc_color) for _ in bands]
     # + no band color
@@ -86,6 +87,7 @@ if __name__ == "__main__":
     args = None
     config_name = None
     tag = None
+    store = None
     try:
         parser = ap.ArgumentParser()
         parser.add_argument("-l", "--load",
@@ -100,10 +102,11 @@ if __name__ == "__main__":
         args = parser.parse_args()
         config_name = args.load
         tag = args.tag
+        store = args.store
     except SystemExit as e:
         print(e)
         while True:
-            q = input("Would you like to specify config file name? Y/N")
+            q = input("Would you like to specify config file name? Y/N ")
             if q in ['y', 'Y']:
                 config_name = input("Name: ")
                 break
@@ -111,6 +114,14 @@ if __name__ == "__main__":
                 break
         if config_name is not None:
             tag = input("Config tag: ")
+        while True:
+            ans = input("Do you want to store the resulting config? Y/N ")
+            if q in ['y', 'Y']:
+                store = True
+                break
+            elif q in ['n', 'N']:
+                store = False
+                break
 
     # argument parsing aftermath
     if config_name is not None:
@@ -156,16 +167,22 @@ if __name__ != '__main__':
     # filtering does not affect di.DATA, so all data is available at any moment
     # the only thing needed to regain access to filtered data from di.get_data
     # is changing filter
-
     BANDS = {
         'center': [None for _ in range(_band_no_)],
         'width': [None for _ in range(_band_no_)],
         'intensity': [0 for _ in range(_band_no_)]
     }
-
     # number of curves per part
     BASE_CTR = int(input("Number of signal curves (integer): "))
     SGNL_CTR = int(input("Number of baseline curves (integer): "))
+    while True:
+        ans = input("Do you want to store the resulting config? Y/N ")
+        if q in ['y', 'Y']:
+            store = True
+            break
+        elif q in ['n', 'N']:
+            store = False
+            break
 
 
 # globals
@@ -275,12 +292,12 @@ _t0 = tm.time()
 # selection algorithm, number of bands defined by initialization
 sgnl_av_conv = sp.convolve(sp.kernel()(5), X_AV, SGNL_AV)
 for nr, (center, width) in enumerate(zip(BANDS['center'], BANDS['width'])):
-    left, center, right = xpeak(X_AV, sgnl_av_conv, max(sgnl_av_conv),
-                                np.mean(sgnl_av_conv))
+    left, x0ix, right = xpeak(X_AV, sgnl_av_conv, max(sgnl_av_conv),
+                              np.mean(sgnl_av_conv))
     if center is None:
         # highest band selection
         # setting bands parameters
-        BANDS['center'][nr] = X_AV[center]
+        BANDS['center'][nr] = X_AV[x0ix]
     if width is None:
         BANDS['width'][nr] = abs(X_AV[left]-X_AV[right])
     # suppressing already selected band
@@ -298,7 +315,7 @@ for fname in SGNL_PARAMS.keys():
         for band, width in zip(BANDS['center'], BANDS['width']):
             right = np.array(comp[2::3] > band-width/2, dtype=int)
             left = np.array(comp[2::3] < band+width/2, dtype=int)
-            BANDS['filter'].append(right*left)
+            BANDS['filter'].append((right*left).astype(bool))
 # calculating intensities
 BANDS['intensity'] = []
 for ftr in BANDS['filter']:
@@ -310,5 +327,49 @@ for ftr in BANDS['filter']:
     BANDS['intensity'][-1] = np.array(BANDS['intensity'][-1])
 _t1 = tm.time()
 print(f"Done ({round(_t1-_t0, 3)}sec.)")
+
+# %%
+if "grf" in tag:
+    intensity_prop = BANDS['intensity'][0]/BANDS['intensity'][1]
+    intensity_base = sp.base_line(THETA, intensity_prop,
+                                  sd_scale=1, av_scale=2.4)
+    plt.polar(THETA, intensity_base)
+    plt.polar(THETA, intensity_prop)
+    plt.show()
+    plt.polar(THETA, intensity_prop-intensity_base)
+
+# %%
+if store is not None:
+    if store:
+        new_config = {
+            "globals": {
+                "mainPath": "",
+                "xName": di.XNAME,
+                "yName": di.YNAME
+            },
+            "materials": {
+                tag: {
+                    "material": "",
+                    "name": MATERIAL,
+                    "path": di.PATH,
+                    "direction": "",
+                    "bands": {
+                        "center": BANDS['center'],
+                        "width": BANDS['width'],
+                        "filter": [[int(ftri) for ftri in ftr] for ftr
+                                   in BANDS['filter']],
+                        "intensity": [list(intens) for intens
+                                      in BANDS['intensity']]
+                    },
+                    "curvesCount": {
+                        "base": BASE_CTR,
+                        "signal": SGNL_CTR
+                    },
+                    "filter": [di.FILTER.start, di.FILTER.stop, di.FILTER.step]
+                }
+            }
+        }
+        with open(input("New config name:"), "w") as new_conf:
+            js.dump(new_config, new_conf)
 
 # %%

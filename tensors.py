@@ -39,7 +39,7 @@ def tensor_plot(theta: np.array, v_inc: np.array, tensor_fun, name=None,
         plt.subplots_adjust(top=0.8)
     id = 100 + 10*len(tensor_fun)
     R = R_psi(-np.pi/2)
-    phi = -np.pi/6
+    phi = 0
     Rp = R_psi(phi)
     Rpi = la.inv(R_psi(phi))
     for nr, tensor in enumerate(tensor_fun):
@@ -63,7 +63,8 @@ def tensor_plot(theta: np.array, v_inc: np.array, tensor_fun, name=None,
 
 n_steps = 360
 t = np.arange(0, 2*np.pi*(1+1/n_steps), 2*np.pi/n_steps)
-ei = np.array([np.cos(t), np.sin(t), 0])
+# ei = np.array([np.cos(t), np.sin(t), 0])
+ei = np.array([t/t, t/t - 1, 0])
 
 
 def A_1(a): return np.array([[a, 0, 0],
@@ -79,6 +80,16 @@ def E1(a): return np.array([[a, 0, 0],
 def E2(a): return np.array([[-3**0.5 * a, 0, 0],
                             [0, 3**0.5 * a, 0],
                             [0, 0, 0]])
+
+
+def E2g1(a): return np.array([[0, -a, 0],
+                              [-a, 0, 0],
+                              [0, 0, 0]])
+
+
+def E2g2(a): return np.array([[a, 0, 0],
+                              [0, -a, 0],
+                              [0, 0, 0]])
 
 
 def T_2x(a): return np.array([[0, 0, 0],
@@ -99,17 +110,20 @@ def T_2z(a): return np.array([[0, a, 0],
 ftype = '.png'
 dpi = 100
 
-tensor_plot(t, ei, A_1, 'A_1', config=polar_conf)
-plt.savefig('a1_mode'+ftype, dpi=dpi)
+# tensor_plot(t, ei, A_1, 'A_1', config=polar_conf)
+# plt.savefig('a1_mode'+ftype, dpi=dpi)
 
-tensor_plot(t, ei, [E1, E2], 'E', config=polar_conf)
-plt.savefig('e_mode'+ftype, dpi=dpi)
+# tensor_plot(t, ei, [E1, E2], 'E', config=polar_conf)
+# plt.savefig('e_mode'+ftype, dpi=dpi)
 
-tensor_plot(t, ei, T_2x, 'T_2(x)', config=polar_conf)
-plt.savefig('t2x_mode'+ftype, dpi=dpi)
-tensor_plot(t, ei, T_2y, 'T_2(y)', config=polar_conf)
-plt.savefig('t2y_mode'+ftype, dpi=dpi)
-tensor_plot(t, ei, T_2z, 'T_2(z)', config=polar_conf)
-plt.savefig('t2z_mode'+ftype, dpi=dpi)
+# tensor_plot(t, ei, T_2x, 'T_2(x)', config=polar_conf)
+# plt.savefig('t2x_mode'+ftype, dpi=dpi)
+# tensor_plot(t, ei, T_2y, 'T_2(y)', config=polar_conf)
+# plt.savefig('t2y_mode'+ftype, dpi=dpi)
+# tensor_plot(t, ei, T_2z, 'T_2(z)', config=polar_conf)
+# plt.savefig('t2z_mode'+ftype, dpi=dpi)
+
+tensor_plot(t, ei, E2g2, 'E_2g', config=polar_conf)
+tensor_plot(t, ei, E2g1, 'E_2g', config=polar_conf)
 
 # %%

@@ -58,7 +58,8 @@ def kernel(ktype='gauss', unitary=True, prec=f64):
     return getattr(_kernel_, ktype)
 
 
-def convolve(kernel, x, signal, adj=True, t=None, adjuster=None) -> np.array:
+def convolve(kernel, x, signal, adj=True, t=None, adjuster=None,
+             prec=f64) -> np.array:
     sig_conv = []
     if t is None:
         t = x.copy()
@@ -77,7 +78,7 @@ def convolve(kernel, x, signal, adj=True, t=None, adjuster=None) -> np.array:
         for ti in t:
             kernel_dint = kernel(x-ti)*np.abs(d(x))
             sig_conv.append(sum(signal*kernel_dint))
-    return np.array(sig_conv, dtype=f128)
+    return np.array(sig_conv, dtype=prec)
 
 
 def deconvolve(kernel, x, signal) -> np.array:
@@ -98,9 +99,9 @@ def deconvolve(kernel, x, signal) -> np.array:
     return signal_ac * sum(signal*np.abs(d(x)))/signal_ac_sfc
 
 
-def conv_variance(kernel, x, signal, adj=True) -> np.array:
-    yav2 = (convolve(kernel, x, signal, adj=adj))**2
-    y2av = (convolve(kernel, x, signal**2, adj=adj))
+def conv_variance(kernel, x, signal, adj=True, prec=f64) -> np.array:
+    yav2 = (convolve(kernel, x, signal, adj=adj, prec=f64))**2
+    y2av = (convolve(kernel, x, signal**2, adj=adj, prec=f64))
     return y2av - yav2
 
 
