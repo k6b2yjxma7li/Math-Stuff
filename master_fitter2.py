@@ -41,7 +41,7 @@ def compound_plot(x, pars, bands=None):
     plt.plot(x, sp.spectrum(x, pars), color=next(rc_color))
     # setting band selectors
     if bands is None:
-        bands = np.array([np.linspace(0, 0, int(len(params)/3), dtype=bool)])
+        bands = np.array([np.linspace(0, 0, int(len(pars)/3), dtype=bool)])
     else:
         bands = np.array(bands, dtype=bool)
     # acquiring color for each existing band
@@ -95,7 +95,7 @@ if __name__ == "__main__":
                             type=str)
         parser.add_argument('-s', '--store',
                             help="Store acquired data from fitting",
-                            action='store_true')
+                            type=str)
         parser.add_argument('-t', '--tag',
                             help="Tag of material configuration in "
                                  " config JSON", type=str)
@@ -104,7 +104,6 @@ if __name__ == "__main__":
         tag = args.tag
         store = args.store
     except SystemExit as e:
-        print(e)
         while True:
             q = input("Would you like to specify config file name? Y/N ")
             if q in ['y', 'Y']:
@@ -117,10 +116,10 @@ if __name__ == "__main__":
         while True:
             ans = input("Do you want to store the resulting config? Y/N ")
             if q in ['y', 'Y']:
-                store = True
+                store = input("Result config name: ")
                 break
             elif q in ['n', 'N']:
-                store = False
+                store = None
                 break
 
     # argument parsing aftermath
@@ -178,10 +177,10 @@ if __name__ != '__main__':
     while True:
         ans = input("Do you want to store the resulting config? Y/N ")
         if q in ['y', 'Y']:
-            store = True
+            store = input("Result config name: ")
             break
         elif q in ['n', 'N']:
-            store = False
+            store = None
             break
 
 
@@ -217,7 +216,7 @@ X_AV = np.mean([di.DATA[fn][di.XNAME][di.FILTER] for fn in di.FILES],
 _t1 = tm.time()
 print(f"Done ({round(_t1-_t0, 3)}sec.)")
 
-# # %%
+# %%
 # curves for base line
 print("Curves for base line... ", end="")
 _t0 = tm.time()
@@ -305,7 +304,7 @@ for nr, (center, width) in enumerate(zip(BANDS['center'], BANDS['width'])):
 
 _t1 = tm.time()
 print(f"Done ({round(_t1-_t0, 3)}sec.)")
-# # %%
+# %%
 print("Calculating band intensities... ")
 _t0 = tm.time()
 # creating band filters
@@ -316,6 +315,7 @@ for fname in SGNL_PARAMS.keys():
             right = np.array(comp[2::3] > band-width/2, dtype=int)
             left = np.array(comp[2::3] < band+width/2, dtype=int)
             BANDS['filter'].append((right*left).astype(bool))
+# %%
 # calculating intensities
 BANDS['intensity'] = []
 for ftr in BANDS['filter']:
@@ -369,7 +369,7 @@ if store is not None:
                 }
             }
         }
-        with open(input("New config name:"), "w") as new_conf:
+        with open(store, "w") as new_conf:
             js.dump(new_config, new_conf)
-
-# %%
+    else:
+        print(f"Bad name for a file: {store}")
