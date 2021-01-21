@@ -8,6 +8,7 @@ Untitled.*
 *.svg
 *.jp*g
 *.html
+*.json
 # for hidden files
 .*
 __pycache__
