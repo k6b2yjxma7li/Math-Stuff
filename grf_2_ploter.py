@@ -6,7 +6,10 @@ import data_import as di
 import spectrals as sp
 from scipy.optimize import leastsq
 
-plt.style.use('dark_background')
+style = 'default'
+# style = 'dark_background'
+
+plt.style.use(style)
 
 img_path = "./.data/Praca_inzynierska/Badania/190522/grf/grf_2_2x50.bmp"
 

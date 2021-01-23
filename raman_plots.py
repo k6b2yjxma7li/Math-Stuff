@@ -308,8 +308,8 @@ ax.set_ylim(0, max(polar_data)*1.1)
 ax.legend()
 fig.show()
 phi_min = abs((p[1] % np.pi)) - np.pi
-# ax.quiver(*[0, 0], *[phi_min, max(polar_data)*1.1], scale=1, scale_units='xy',
-#           angles='xy', color='black')
+# ax.quiver(*[0, 0], *[phi_min, max(polar_data)*1.1], scale=1,
+#           scale_units='xy', angles='xy', color='black')
 
 # arc_2D(ax, [0, 0], [3*max(polar_data)/4, 0], phi_min, text=r'$\phi_0$',
 #        projection='polar', color='black', lw=0.7, ls='--')
