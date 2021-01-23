@@ -19,7 +19,8 @@ FILTER = slice(0, None)
 def read_dir(ext="", sorting=lambda nm: nm):
     global PATH, DATA, FILES
     try:
-        PATH, _dir_, FILES = next(os.walk(PATH))
+        PATH, _dir_, files = next(os.walk(PATH))
+        FILES += files
         if len(FILES) < 1:
             dir_str = "\n\t".join(_dir_)
             fls_str = "\n\t".join(FILES)
@@ -28,7 +29,7 @@ def read_dir(ext="", sorting=lambda nm: nm):
                   f"Dirs:\n\t{dir_str}")
     except StopIteration as e:
         if op.isfile(PATH):
-            FILES = [op.basename(PATH)]
+            FILES += [op.basename(PATH)]
             PATH = op.dirname(PATH)
     FILES = sorted(FILES, key=sorting)
     sep = r"(\t{1,}|,|;)"
