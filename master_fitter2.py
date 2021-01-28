@@ -289,7 +289,7 @@ print(f"Done ({round(_t1-_t0, 3)}sec.)")
 print("Selection of bands by highest value... ")
 _t0 = tm.time()
 # selection algorithm, number of bands defined by initialization
-sgnl_av_conv = sp.convolve(sp.kernel()(5), X_AV, SGNL_AV)
+sgnl_av_conv = sp.convolve(sp.kernel()(10), X_AV, SGNL_AV)
 for nr, (center, width) in enumerate(zip(BANDS['center'], BANDS['width'])):
     left, x0ix, right = xpeak(X_AV, sgnl_av_conv, max(sgnl_av_conv),
                               np.mean(sgnl_av_conv))
@@ -300,7 +300,10 @@ for nr, (center, width) in enumerate(zip(BANDS['center'], BANDS['width'])):
     if width is None:
         BANDS['width'][nr] = abs(X_AV[left]-X_AV[right])
     # suppressing already selected band
+    plt.plot(X_AV, sgnl_av_conv)
     sgnl_av_conv[left:right] = np.mean(sgnl_av_conv)
+    plt.plot(X_AV, sgnl_av_conv)
+    plt.show()
 
 _t1 = tm.time()
 print(f"Done ({round(_t1-_t0, 3)}sec.)")
@@ -373,3 +376,5 @@ if store is not None:
             js.dump(new_config, new_conf)
     else:
         print(f"Bad name for a file: {store}")
+
+# %%
