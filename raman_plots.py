@@ -24,8 +24,8 @@ from arc import arc_2D
 
 
 # global settings for datafiles
-dset = "VH"
-tag = "hbn"
+dset = "VV"
+tag = "grf"
 
 # global setting for plot style
 plt.style.use('default')
@@ -33,7 +33,7 @@ plt.style.use('default')
 bands = []
 
 modes_tagged = {
-    "grf": ["2D", "G"],
+    "grf": ["2D", "G", "D"],
     "hbn": ["G"]
 }
 
@@ -57,6 +57,7 @@ di.XNAME = "#Wave"
 di.YNAME = "#Intensity"
 
 
+di.FILES = []
 # read all datafiles
 di.read_dir()
 # initialize globals X and Y
@@ -212,7 +213,8 @@ ax2.xaxis.set_major_locator(MultipleLocator(30))
 ax2.xaxis.set_minor_locator(MultipleLocator(10))
 
 # axes limits
-ax2.set_ylim(0, 1.2*max(polar_data))
+if tag == 'hbn':
+    ax2.set_ylim(0, 1.2*max(polar_data))
 ax2.set_xlim([-5, 365])
 
 # forcing shapes
@@ -226,45 +228,11 @@ ax2.grid(True, which='minor', lw=0.5, ls=':', color='black')
 fig.show()
 fig.savefig(f"{tag}_all_3d_{dset}.png", dpi=300, bbox_inches='tight')
 
-# %%
-# PART 2 -- showing lorentzian fitting
-fltr = ((400 < x_av).astype(int)*(x_av < 600).astype(int)).astype(bool)
-y_data = y_av[fltr]
-x_data = x_av[fltr]
-p_init = [10000, 2, 525,
-          20000, 2, 520,
-          10000, 2, 515,
-          5000, 1000, 520]
-p, h = leastsq(residual(x_data, y_data, func=spectrum), p_init)
-
-fig, ax = plt.subplots()
-ax.plot(x_data, y_data, '.', ms=3, color='black', label='Zmierzone widmo')
-
-t = np.arange(min(x_data), max(x_data), 0.1)
-
-ax.plot(t, spectrum(t, p), lw=1, color='black',
-        label="Dopasowanie")
-
-
-for nr in range(0, len(p)-2, 3):
-    # print(nr, nr+3)
-    if np.log10(np.abs(p[nr+1])) < 1.5 and np.log10(np.abs(p[nr])) > -0.5:
-        ax.plot(t, spectrum(t, p[nr:nr+3]), '--', color='black')
-ax.legend()
-ax.set_xlabel(r'$\Delta\nu [\mathrm{cm^{-1}}]$')
-ax.set_ylabel('Amplituda [j.u.]')
-ax.set_yticks([])
-fig.show()
-
-res_vec = residual(x_data, y_data)(p)
-print(res_vec.dot(res_vec))
-
-fig.savefig(f"./lorentz_fitting.png", dpi=300, bbox_inches='tight')
 
 # %%
 # PART 3 -- fitting to intensity
-# polar_data = np.array(bands['intensity'][0])/np.array(bands['intensity'][1])
-polar_data = np.array(bands['intensity'][0])
+polar_data = np.array(bands['intensity'][0])/np.array(bands['intensity'][1])
+# polar_data = np.array(bands['intensity'][0])
 
 fig = plt.figure(figsize=[6, 6])
 ax = fig.add_subplot(111, projection='polar')
@@ -294,7 +262,7 @@ def res(p):
 
 # ax.plot(phi, polar_data, '.', ms=3, color='black', label="Intensywność")
 ax.plot(phi, polar_data, '.', ms=3, color='black', label="")
-ax.set_yticklabels([])
+# ax.set_yticklabels([])
 p, h = leastsq(res, [1000, 0.1])
 
 d_th = np.pi/180
