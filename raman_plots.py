@@ -11,10 +11,10 @@ from matplotlib.ticker import (MultipleLocator,
                                FixedLocator)
 import matplotlib.gridspec as mgs
 # api for data extraction
-import data_import as di
+import nano.data_import as di
 # api for convolutions and fft (top layer of numpy fft)
-import spectrals as sp
-from spectrals import d, kernel, spectrum, residual
+import nano.spectrals as sp
+from nano.spectrals import d, kernel, spectrum, residual
 import json as js
 # fitting
 from scipy.optimize import leastsq

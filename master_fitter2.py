@@ -5,8 +5,8 @@ import numpy as np
 import pandas as pd
 import os.path as op
 import argparse as ap
-import spectrals as sp
-import data_import as di
+import nano.spectrals as sp
+import nano.data_import as di
 import matplotlib.pyplot as plt
 from nano.functions import xpeak
 from scipy.optimize import least_squares, leastsq

@@ -2,8 +2,8 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-import data_import as di
-import spectrals as sp
+import nano.data_import as di
+import nano.spectrals as sp
 from scipy.optimize import leastsq
 
 style = 'default'
