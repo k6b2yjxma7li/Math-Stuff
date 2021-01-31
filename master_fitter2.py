@@ -318,7 +318,7 @@ for fname in SGNL_PARAMS.keys():
             right = np.array(comp[2::3] > band-width/2, dtype=int)
             left = np.array(comp[2::3] < band+width/2, dtype=int)
             BANDS['filter'].append((right*left).astype(bool))
-# %%
+# # %%
 # calculating intensities
 BANDS['intensity'] = []
 for ftr in BANDS['filter']:

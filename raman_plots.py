@@ -7,7 +7,8 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.collections import PolyCollection as mpc
 from matplotlib.ticker import (MultipleLocator,
                                FormatStrFormatter,
-                               AutoMinorLocator)
+                               AutoMinorLocator,
+                               FixedLocator)
 import matplotlib.gridspec as mgs
 # api for data extraction
 import data_import as di
@@ -24,7 +25,7 @@ from arc import arc_2D
 
 
 # global settings for datafiles
-dset = "VV"
+dset = "VH"
 tag = "grf"
 
 # global setting for plot style
@@ -137,9 +138,9 @@ y_av_ranged = y_av[fltr]
 
 # 2 lines (L shape)
 for mode_name, center in zip(mode_names, bands['center']):
+    zlim_top += 2000
     ax.plot(*[[center, center], [zlim_bot, zlim_top], 370],
             '--', lw=2, zdir='y', color='black')
-
     ax.plot(*[[center, center], [y_min, y_min], [0, 370]],
             '--', lw=2, zdir='y', color='black')
 
@@ -165,13 +166,28 @@ ax.xaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
 ax.yaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
 
 # adjusting tick labels rotation
-ax.set_xticklabels(np.array(ax.xaxis.get_ticklocs(), dtype=int), ha='right',
-                   fontsize=10)
-ax.xaxis.set_tick_params(rotation=40,
-                         pad=-8)
-ax.set_yticklabels(np.array(ax.yaxis.get_ticklocs(), dtype=int), ha='left',
-                   fontsize=10)
-ax.yaxis.set_tick_params(rotation=-20, pad=-7)
+if tag == 'grf':
+    ax.set_xticklabels(np.array(ax.xaxis.get_ticklocs(), dtype=int),
+                       ha='left',
+                       # va='center',
+                       fontsize=10)
+    ax.xaxis.set_tick_params(rotation=-40, pad=-8)
+    ax.set_yticklabels(np.array(ax.yaxis.get_ticklocs(), dtype=int),
+                       ha='right',
+                       # va='center',
+                       fontsize=10)
+    ax.yaxis.set_tick_params(rotation=20, pad=-7)
+if tag == 'hbn':
+    ax.set_xticklabels(np.array(ax.xaxis.get_ticklocs(), dtype=int),
+                       ha='right',
+                       # va='center',
+                       fontsize=10)
+    ax.xaxis.set_tick_params(rotation=40, pad=-8)
+    ax.set_yticklabels(np.array(ax.yaxis.get_ticklocs(), dtype=int),
+                       ha='left',
+                       # va='center',
+                       fontsize=10)
+    ax.yaxis.set_tick_params(rotation=-20, pad=-7)
 
 # does not work (idk why)
 ax.xaxis.set_tick_params(which='major', length=10)
@@ -179,9 +195,14 @@ ax.xaxis.set_tick_params(which='minor', length=2)
 
 
 # camera settings
-ax.elev = 20
-ax.azim = -60
-ax.dist = 10
+if tag == 'grf':
+    ax.elev = 20
+    ax.azim = -110
+    ax.dist = 10
+if tag == 'hbn':
+    ax.elev = 20
+    ax.azim = -80
+    ax.dist = 10
 
 # 3d box grid settings
 ax.grid(False)
@@ -195,7 +216,7 @@ fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
 # Section 2
 # new subplot, new ax
 ax2 = fig.add_subplot(gs_plot_b, title=r"Intensywności ("+dset+")")
-colors = ['black', 'grey']
+colors = ['#000000', '#666666', '#3F3F3F']
 for mode, color, mode_name in zip(bands['intensity'], colors, mode_names):
     # plot
     polar_data = mode
@@ -208,7 +229,8 @@ if len(bands['intensity']) > 1:
     ax2.legend()
 
 # ticks
-ax2.set_yticks([])
+# ax2.set_yticks([])
+ax2.yaxis.set_major_locator(FixedLocator([0]))
 ax2.xaxis.set_major_locator(MultipleLocator(30))
 ax2.xaxis.set_minor_locator(MultipleLocator(10))
 
