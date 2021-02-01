@@ -1,3 +1,11 @@
+# the Nano module
+
+"""
+`nano`'s `data_import`
+===
+
+"""
+
 import os
 import re
 import numpy as np

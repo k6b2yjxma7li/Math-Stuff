@@ -1,3 +1,10 @@
+# The Nano submodule
+
+"""
+`nano`'s `spectrals`
+===
+"""
+
 from scipy.optimize import least_squares, leastsq
 from nano.functions import d, div
 
