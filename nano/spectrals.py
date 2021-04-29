@@ -29,7 +29,17 @@ sbt = np.subtract
 
 
 def kernel(ktype='gauss', unitary=True, prec=f64):
+    """kernel -- kernel function generator
 
+    Parameters
+    ----------
+    ktype : str, optional
+        kernel type; possible values: 'gauss', 'lorentz', 'fddens', by default 'gauss'
+    unitary : bool, optional
+        specifies if kernel is (surface) normalized or not, by default True
+    prec : numpy numerical object, optional
+        (data type) dtype of kernel results' numpy arrays, by default numpy.float64
+    """
     def _gauss_(sig):
         """Gaussian curve generator"""
         amp = unitary*((2*np.pi*pwr(sig, 2))**-0.5) + (not unitary)*1
@@ -65,34 +75,63 @@ def kernel(ktype='gauss', unitary=True, prec=f64):
     return getattr(_kernel_, ktype)
 
 
-def convolve(kernel, x, signal, adj=True, t=None, adjuster=None,
-             prec=f64) -> np.array:
-    sig_conv = []
+def convolve(kernel, x:np.ndarray, y:np.ndarray, t:np.ndarray=None,
+              adj=True, adjuster=None, batch_size:int=None, prec=f64) -> np.ndarray:
+    """Performance-optimised simple convolution of `kernel` over y-vector"""
     if t is None:
-        t = x.copy()
-    if adjuster is not None:
-        for ti in t:
-            kernel_dint = kernel(x-ti)*np.abs(d(x))
-            kernal_int = sum(adjuster(x-ti)*np.abs(d(x)))
-            sig_conv.append(sum(signal*kernel_dint/kernal_int))
-        return np.array(sig_conv)
-    if adj:
-        for ti in t:
-            kernel_dint = kernel(x-ti)*np.abs(d(x))
-            kernal_int = sum(kernel_dint)
-            sig_conv.append(sum(signal*kernel_dint/kernal_int))
+        t = x
+    if adjuster is None:
+        adjuster = kernel
+    # 1st dim of matrices
+    N = len(x)
+    # size of t's elements (in bytes)
+    B = t.itemsize
+    # max 2nd size of matrices
+    if batch_size is None:
+        Mmax = int(2**(np.floor(np.log2((8*1024**2)/(N * B)))))
+        # make sure Mmax != 0
+        Mmax = Mmax + (Mmax < 1)
     else:
-        for ti in t:
-            kernel_dint = kernel(x-ti)*np.abs(d(x))
-            sig_conv.append(sum(signal*kernel_dint))
-    return np.array(sig_conv, dtype=prec)
+        Mmax = batch_size
+    # yc init
+    yc = np.zeros(len(t), dtype=prec)
+    # x discrete differential
+    dx = d(x)
+    # if optim. conditions are fulfilled without chunking
+    if t.size < Mmax:
+        Mmax = t.size
+    it = 0
+    M = Mmax
+    while yc.size > Mmax*it:
+        if yc.size - Mmax*it > Mmax:
+            left, right = Mmax*it, Mmax*(it+1)
+        else:
+            left, right = Mmax*it, yc.size
+            M = yc.size - Mmax*it
+        # construction of vectors' vector
+        # shifting 0-point
+        xmat_step = np.array([x,]*M) - np.array([t[left:right],]*N).T
+        # kernel matrix
+        kmat = kernel(xmat_step)
+        if adj:
+            # normalisation (to take into account boundary conditions)
+            knorminv = np.array([1/(adjuster(xmat_step).dot(dx)),]*N).T
+            # proper convolution
+            yc[left:right] = (kmat * knorminv).dot(y*dx)
+        else:
+            yc[left:right] = kmat.dot(y*dx)
+        it += 1
+    return yc
 
-
-def deconvolve(kernel, x, signal) -> np.array:
+def deconvolve(kernel, x: np.ndarray, signal: np.ndarray) -> np.ndarray:
+    """Inverse of convolution"""
     # getting possibly most regular kernel (centered)
     # x = np.array(x, dtype=f128)
     x_center = (max(x) + min(x))/2
-    k = kernel(x - x_center)
+    if kernel is np.ndarray:
+        k = kernel
+    else:
+        k = kernel(x - x_center)
     # kernel fft
     kf = nft.fft(k)
     # data fft
@@ -107,12 +146,14 @@ def deconvolve(kernel, x, signal) -> np.array:
 
 
 def conv_variance(kernel, x, signal, adj=True, prec=f64) -> np.array:
-    yav2 = (convolve(kernel, x, signal, adj=adj, prec=f64))**2
-    y2av = (convolve(kernel, x, signal**2, adj=adj, prec=f64))
+    """Moving estimators' variance"""
+    yav2 = (convolve(kernel, x, signal, adj=adj, prec=prec))**2
+    y2av = (convolve(kernel, x, signal**2, adj=adj, prec=prec))
     return y2av - yav2
 
 
 def spectrum(x, param_vec, func=None, prec=f128) -> np.array:
+    """Spectrum -- sum of basic functions"""
     if func is None:
         func = kernel('lorentz', unitary=False, prec=prec)
     result = np.zeros(len(x), dtype=prec)
@@ -123,6 +164,7 @@ def spectrum(x, param_vec, func=None, prec=f128) -> np.array:
 
 
 def residual(x, y, weights=None, func=spectrum, prec=f128):
+    """Compute weighted residuals of data vector `y` fitted by `func`"""
     x, y = x.astype(prec), y.astype(prec)
     if weights is None:
         weights = np.linspace(1, 1, len(x)).astype(prec)
@@ -133,6 +175,7 @@ def residual(x, y, weights=None, func=spectrum, prec=f128):
 
 
 def cutoff(u, threshold, level=None):
+    """Cutoff -- set values from `u` to some level if above `threshold`"""
     ix = np.arange(len(u))
     if level is None:
         level = threshold
@@ -143,16 +186,18 @@ def cutoff(u, threshold, level=None):
     return np.array(list(u_dict.values()))
 
 
-def fft_ready(x: np.array, y: np.array):
+def fft_ready(x: np.ndarray, y: np.ndarray):
+    """Getting frequency domain and FFT of x and y data"""
     frq = 1/abs(np.mean(np.diff(x)))
     frng = int(len(y)/2)
-    ft = nft.fft(y)/len(y)
+    ft = nft.fft(y)/(len(y)/2)
     yft = ft[:frng]
-    f = np.arange(0, frng, 1)*frq/frng
+    f = np.fft.fftfreq(len(x), 1/frq)[:frng]
     return f, yft
 
 
 def fft_plot(x: np.array, y: np.array, name='FFT', title='', scales="log-log"):
+    """Creating FFT plot from passed x and y data"""
     f, yft = fft_ready(x, y)
     plt.plot(f, np.abs(yft), label=name, lw=0.7)
     plt.legend()

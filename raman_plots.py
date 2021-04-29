@@ -35,8 +35,10 @@ bands = []
 
 modes_tagged = {
     "grf": ["2D", "G", "D"],
-    "hbn": ["G"]
+    "hbn": [r"\)mod \(E_{2g}"]
 }
+
+colors = ['#ff6600', '#0066ff', '#33ff33']
 
 mode_names = modes_tagged[tag]
 
@@ -138,7 +140,10 @@ y_av_ranged = y_av[fltr]
 
 # 2 lines (L shape)
 for mode_name, center in zip(mode_names, bands['center']):
-    zlim_top += 2000
+    if dset == 'VV' and tag == 'grf':
+        zlim_top += 4000
+    else:
+        zlim_top += 2000
     ax.plot(*[[center, center], [zlim_bot, zlim_top], 370],
             '--', lw=2, zdir='y', color='black')
     ax.plot(*[[center, center], [y_min, y_min], [0, 370]],
@@ -201,7 +206,7 @@ if tag == 'grf':
     ax.dist = 10
 if tag == 'hbn':
     ax.elev = 20
-    ax.azim = -80
+    ax.azim = -60
     ax.dist = 10
 
 # 3d box grid settings
@@ -216,13 +221,16 @@ fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
 # Section 2
 # new subplot, new ax
 ax2 = fig.add_subplot(gs_plot_b, title=r"Intensywności ("+dset+")")
-colors = ['#000000', '#666666', '#3F3F3F']
 for mode, color, mode_name in zip(bands['intensity'], colors, mode_names):
     # plot
-    polar_data = mode
-    ax2.plot(range(0, 370, 10), polar_data.copy(), '.', ms=10, color=color,
-             label=mode_name)
-    # axes labels
+    if tag == 'grf':
+        polar_data = mode
+        ax2.plot(range(0, 370, 10), polar_data.copy(), '.', ms=10, color=color,
+                 label=mode_name)
+    else:
+        polar_data = mode
+        ax2.plot(range(0, 370, 10), polar_data.copy(), '.', ms=10,
+                 color='black', label=mode_name)
 ax2.set_xlabel(r'Polaryzacja \([^{\circ}]\)', **label_kwargs)
 ax2.set_ylabel(r'Intensywność [j.u]', **label_kwargs)
 if len(bands['intensity']) > 1:
@@ -253,7 +261,11 @@ fig.savefig(f"{tag}_all_3d_{dset}.png", dpi=300, bbox_inches='tight')
 
 # %%
 # PART 3 -- fitting to intensity
-polar_data = np.array(bands['intensity'][0])/np.array(bands['intensity'][1])
+if tag == 'grf':
+    polar_data = (np.array(bands['intensity'][0]) /
+                  np.array(bands['intensity'][1]))
+else:
+    polar_data = np.array(bands['intensity'][0])
 # polar_data = np.array(bands['intensity'][0])
 
 fig = plt.figure(figsize=[6, 6])
@@ -282,10 +294,18 @@ def res(p):
     return polar_data - fit_fun(phi, p)
 
 
-# ax.plot(phi, polar_data, '.', ms=3, color='black', label="Intensywność")
-ax.plot(phi, polar_data, '.', ms=3, color='black', label="")
-# ax.set_yticklabels([])
-p, h = leastsq(res, [1000, 0.1])
+markers = ['*-', '^-', '.-']
+if tag in ['hbn', 'si']:
+    ax.plot(phi, polar_data, '.-', ms=10, color='black', label="Intensywność")
+else:
+    for band, clr, name, mrkr in zip(bands['intensity'], colors,
+                                     mode_names, markers):
+        ax.plot(phi, np.array(band)/max(band), mrkr, ms=10, color=clr,
+                label=name)
+ax.set_yticklabels([])
+# ax.plot(phi, polar_data, '.', ms=10, color='black', label="2D/G")
+p = np.array([0, 0, 0])
+# p, h = leastsq(res, [1000, 0.1])
 
 d_th = np.pi/180
 
@@ -294,7 +314,7 @@ theta = np.arange(0, 2*np.pi+d_th, d_th)
 # ax.plot(theta, fit_fun(theta, p), color='black', lw=0.7, label="Dopasowanie")
 # ax.quiver(*[0, 0], *[0, max(polar_data)*1.1], scale=1, scale_units='xy',
 #           angles='xy', color='grey')
-ax.set_ylim(0, max(polar_data)*1.1)
+ax.set_ylim(0, None)
 ax.legend()
 fig.show()
 phi_min = abs((p[1] % np.pi)) - np.pi
@@ -308,6 +328,9 @@ print(f"Phi0 {180*phi_min/np.pi} deg.")
 if len(p) > 2:
     theta_min = abs(180*(p[2] % np.pi)/np.pi)
     print(f"Theta {theta_min} deg.")
-fig.savefig(f'{tag}_polar_w_fit_{dset}.png', dpi=300, bbox_inches='tight')
+if tag == 'grf':
+    fig.savefig(f'{tag}_{dset}_bands.png', dpi=300, bbox_inches='tight')
+else:
+    fig.savefig(f'{tag}_polar_w_fit_{dset}.png', dpi=300, bbox_inches='tight')
 
 # %%
